@@ -13,8 +13,10 @@ import indi.pplong.composelearning.core.cache.FTPClientCache
 import indi.pplong.composelearning.core.cache.FTPServerPool
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.ActiveServer
+import indi.pplong.composelearning.core.file.model.FileActionBottomAppBarStatus
 import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.model.toFileItemInfo
+import indi.pplong.composelearning.core.file.ui.FileBottomAppBarAction
 import indi.pplong.composelearning.core.load.model.TransferringFile
 import kotlinx.coroutines.launch
 import java.io.InputStream
@@ -100,7 +102,7 @@ class FilePathViewModel @AssistedInject constructor(
                 uploadSingleFile(intent.transferringFile, intent.inputStream)
             }
 
-            is FilePathUiIntent.DeleteFile -> deleteFile(intent.fileName)
+            is FilePathUiIntent.DeleteFile -> deleteFile()
             is FilePathUiIntent.DismissDialog -> sendEffect {
                 FilePathUiEffect.DismissDeleteDialog
             }
@@ -110,13 +112,29 @@ class FilePathViewModel @AssistedInject constructor(
                     FilePathUiEffect.ShowDeleteDialog(intent.fileName)
                 }
             }
+
+            FilePathUiIntent.Refresh -> {
+                refresh()
+            }
+
+            FilePathUiIntent.OpenFileSelectWindow -> {
+                sendEffect { FilePathUiEffect.ShowFileSelectWindow }
+            }
+
+            is FilePathUiIntent.OnFileSelect -> {
+                onFileSelected(intent.fileName, intent.select)
+            }
+
+            is FilePathUiIntent.AppBar.SelectFileMode -> {
+                onSelectModeChanged(intent.select)
+            }
         }
     }
 
-    private fun deleteFile(filePath: String) {
+    private fun deleteFile() {
         launchOnIO {
             setState { copy(actionLoadingState = RequestingState.REQUEST) }
-            val deleteFile = cache.coreFTPClient.deleteFile(filePath)
+            val deleteFile = cache.coreFTPClient.deleteFile(uiState.value.selectedFileList.toList())
             setState { copy(actionLoadingState = RequestingState.DONE) }
             if (deleteFile) {
                 sendEffect { FilePathUiEffect.ActionFailed("Failed") }
@@ -192,9 +210,84 @@ class FilePathViewModel @AssistedInject constructor(
         }
     }
 
+    private fun refresh() {
+        launchOnIO {
+            setState { copy(loadingState = LoadingState.LOADING) }
+            val files = cache.coreFTPClient.getFiles()
+            val currentPath = cache.coreFTPClient.getCurrentPath()
+            if (files != null) {
+                setState {
+                    copy(
+                        loadingState = LoadingState.SUCCESS,
+                        fileList = files.map { it.toFileItemInfo(prefix = currentPath) },
+                    )
+                }
+            } else {
+                setState { copy(loadingState = LoadingState.FAIL) }
+            }
+        }
+    }
+
+    private fun onFileSelected(fileName: String, select: Boolean) {
+        println("File Select $fileName  $select")
+        setState {
+            copy(
+                selectedFileList = selectedFileList.toMutableSet().apply {
+                    if (select) {
+                        this.add(fileName)
+                    } else {
+                        this.remove(fileName)
+                    }
+                }
+            )
+        }
+    }
+
     @AssistedFactory
     interface FilePathViewModelFactory {
         fun create(host: String): FilePathViewModel
+    }
+
+    // Maybe it's better to be placed in Compose File
+    fun bottomAppBarActionEvents(fileBottomAppBarAction: FileBottomAppBarAction) {
+        when (fileBottomAppBarAction) {
+            FileBottomAppBarAction.REFRESH -> {
+                sendIntent(FilePathUiIntent.Refresh)
+            }
+
+            FileBottomAppBarAction.DELETE -> {
+                sendIntent(FilePathUiIntent.OpenDeleteFileDialog(uiState.value.selectedFileList))
+            }
+
+            else -> {}
+        }
+    }
+
+    // Maybe it's better to be placed in Compose File
+    fun bottomAppBarFABActionEvents(
+        status: FileActionBottomAppBarStatus
+    ) {
+        when (status) {
+            FileActionBottomAppBarStatus.DIRECTORY -> {
+                sendIntent(FilePathUiIntent.OpenFileSelectWindow)
+            }
+
+            FileActionBottomAppBarStatus.FILE -> {
+
+            }
+        }
+    }
+
+    private fun onSelectModeChanged(select: Boolean) {
+        if (select.xor(uiState.value.appBarStatus == FileActionBottomAppBarStatus.DIRECTORY)) {
+            return
+        }
+        setState {
+            copy(
+                appBarStatus = if (select) FileActionBottomAppBarStatus.FILE else FileActionBottomAppBarStatus.DIRECTORY,
+                selectedFileList = mutableSetOf()
+            )
+        }
     }
 
 }

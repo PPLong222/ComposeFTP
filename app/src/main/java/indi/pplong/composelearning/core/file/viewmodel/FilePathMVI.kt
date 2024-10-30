@@ -6,6 +6,7 @@ import indi.pplong.composelearning.core.base.mvi.UiState
 import indi.pplong.composelearning.core.base.state.LoadingState
 import indi.pplong.composelearning.core.base.state.RequestingState
 import indi.pplong.composelearning.core.file.model.ActiveServer
+import indi.pplong.composelearning.core.file.model.FileActionBottomAppBarStatus
 import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.load.model.TransferringFile
 import java.io.InputStream
@@ -21,7 +22,9 @@ data class FilePathUiState(
     val activeList: List<ActiveServer> = arrayListOf(),
     val fileList: List<FileItemInfo> = arrayListOf(),
     val loadingState: LoadingState = LoadingState.LOADING,
-    val actionLoadingState: RequestingState = RequestingState.DONE
+    val actionLoadingState: RequestingState = RequestingState.DONE,
+    val appBarStatus: FileActionBottomAppBarStatus = FileActionBottomAppBarStatus.DIRECTORY,
+    val selectedFileList: Set<String> = mutableSetOf()
 ) : UiState
 
 sealed class FilePathUiIntent : UiIntent {
@@ -39,13 +42,21 @@ sealed class FilePathUiIntent : UiIntent {
     /**
      * @param fileName: fileName of current path
      */
-    data class DeleteFile(val fileName: String) : FilePathUiIntent()
+    data object DeleteFile : FilePathUiIntent()
     data object DismissDialog : FilePathUiIntent()
-    data class OpenDeleteFileDialog(val fileName: String) : FilePathUiIntent()
+    data class OpenDeleteFileDialog(val fileName: Set<String>) : FilePathUiIntent()
+    data object Refresh : FilePathUiIntent()
+    data object OpenFileSelectWindow : FilePathUiIntent()
+    sealed class AppBar {
+        data class SelectFileMode(val select: Boolean) : FilePathUiIntent()
+    }
+
+    data class OnFileSelect(val fileName: String, val select: Boolean) : FilePathUiIntent()
 }
 
 sealed class FilePathUiEffect : UiEffect {
-    data class ShowDeleteDialog(val fileName: String) : FilePathUiEffect()
+    data class ShowDeleteDialog(val fileName: Set<String>) : FilePathUiEffect()
     data object DismissDeleteDialog : FilePathUiEffect()
     data class ActionFailed(val text: String) : FilePathUiEffect()
+    data object ShowFileSelectWindow : FilePathUiEffect()
 }

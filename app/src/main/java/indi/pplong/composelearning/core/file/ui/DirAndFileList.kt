@@ -1,11 +1,7 @@
 package indi.pplong.composelearning.core.file.ui
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -21,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -32,6 +29,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -46,21 +44,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.core.content.ContextCompat
 import indi.pplong.composelearning.R
 import indi.pplong.composelearning.core.base.ui.PopupSimpleItem
 import indi.pplong.composelearning.core.cache.TransferStatus
+import indi.pplong.composelearning.core.file.model.FileActionBottomAppBarStatus
 import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiIntent
+import indi.pplong.composelearning.core.file.viewmodel.FilePathUiState
 import indi.pplong.composelearning.core.util.DateUtil
 import indi.pplong.composelearning.core.util.FileUtil
 
@@ -73,32 +72,36 @@ import indi.pplong.composelearning.core.util.FileUtil
 
 @Composable
 fun DirAndFileList(
-    fileList: List<FileItemInfo>,
+    uiState: FilePathUiState,
     onIntent: (FilePathUiIntent) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier
-            .padding(16.dp)
-            .clip(shape = RoundedCornerShape(16.dp))
     ) {
-        items(fileList.size) { index ->
+        items(uiState.fileList) { item ->
             CommonFileItem(
-                fileInfo = fileList[index],
+                fileInfo = item,
                 onIntent = onIntent,
-                index == fileList.size - 1
+                uiState.fileList.last() == item,
+                isOnSelectMode = uiState.appBarStatus == FileActionBottomAppBarStatus.FILE,
+                isSelect = uiState.selectedFileList.contains(item.name)
             )
         }
+
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
+@Preview
 fun CommonFileItem(
     fileInfo: FileItemInfo = FileItemInfo(
         transferStatus = TransferStatus.Loading
     ),
     onIntent: (FilePathUiIntent) -> Unit = {},
-    isLast: Boolean,
+    isLast: Boolean = false,
+    isOnSelectMode: Boolean = false,
+    isSelect: Boolean = false,
 ) {
 
     var isPopVisible by remember { mutableStateOf(false) }
@@ -145,9 +148,12 @@ fun CommonFileItem(
 
                 },
                 trailingContent = {
-                    if (!fileInfo.isDir) {
-                        FileTailIconItem(fileInfo, onIntent)
-                    }
+                    FileTailIconItem(
+                        fileInfo,
+                        onIntent,
+                        isOnSelectMode = isOnSelectMode,
+                        isSelect = isSelect
+                    )
                 },
                 colors = ListItemDefaults.colors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
@@ -160,15 +166,22 @@ fun CommonFileItem(
                             isFadeIn = true
                         },
                         onClick = {
-                            if (fileInfo.isDir) {
-                                onIntent(
-                                    FilePathUiIntent.MoveForward(
-                                        fileInfo.pathPrefix
-                                            .plus("/")
-                                            .plus(fileInfo.name)
+                            if (!isOnSelectMode) {
+                                if (fileInfo.isDir) {
+                                    onIntent(
+                                        FilePathUiIntent.MoveForward(
+                                            fileInfo.pathPrefix
+                                                .plus("/")
+                                                .plus(fileInfo.name)
+                                        )
                                     )
+                                }
+                            } else {
+                                onIntent(
+                                    FilePathUiIntent.OnFileSelect(fileInfo.name, !isSelect)
                                 )
                             }
+
                         }
                     )
             )
@@ -204,7 +217,6 @@ fun CommonFileItem(
                             onclick = {
                                 isPopVisible = false
                                 isFadeIn = false
-                                onIntent(FilePathUiIntent.OpenDeleteFileDialog(fileName = fileInfo.name))
                             })
                         PopupSimpleItem(text = "Rename", imageVector = Icons.Default.Edit)
                         PopupSimpleItem(
@@ -228,88 +240,87 @@ fun CommonFileItem(
 @Composable
 fun FileTailIconItem(
     fileInfo: FileItemInfo,
-    onIntent: (FilePathUiIntent) -> Unit
-) {
+    onIntent: (FilePathUiIntent) -> Unit,
+    isOnSelectMode: Boolean = true,
+    isSelect: Boolean = true,
+
+    ) {
     val context = LocalContext.current
-    var writePermissionState by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context, Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
+
+    if (isOnSelectMode) {
+        Checkbox(
+            checked = isSelect,
+            onCheckedChange = null
         )
-    }
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        writePermissionState = isGranted
-    }
-
-    Log.d("test", "FileTailIconItem: ${fileInfo.transferStatus}")
-    when (fileInfo.transferStatus) {
-        TransferStatus.Failed, TransferStatus.Initial -> {
-            Button(
-                onClick = {
-                    // TODO: Differentiate by Android Version
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        FileUtil.getFileUriInDownloadDir(context, fileInfo.name)?.let { uri ->
-                            context.contentResolver.openOutputStream(uri)?.let { stream ->
-                                onIntent(
-                                    FilePathUiIntent.Download(
-                                        stream,
-                                        fileInfo,
-                                        uri.toString()
+    } else {
+        Log.d("test", "FileTailIconItem: ${fileInfo.transferStatus}")
+        when (fileInfo.transferStatus) {
+            TransferStatus.Failed, TransferStatus.Initial -> {
+                Button(
+                    onClick = {
+                        // TODO: Differentiate by Android Version
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            FileUtil.getFileUriInDownloadDir(context, fileInfo.name)?.let { uri ->
+                                context.contentResolver.openOutputStream(uri)?.let { stream ->
+                                    onIntent(
+                                        FilePathUiIntent.Download(
+                                            stream,
+                                            fileInfo,
+                                            uri.toString()
+                                        )
                                     )
-                                )
+                                }
                             }
+
+
+                        } else {
+                            // TODO
                         }
+                    },
+                    modifier = Modifier
+                        .width(32.dp)
+                        .height(32.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(4.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.KeyboardArrowDown,
+                        null
+                    )
+                }
+            }
 
-
-                    } else {
-                        // TODO
-                    }
-                },
-                modifier = Modifier
-                    .width(32.dp)
-                    .height(32.dp),
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(4.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
+            TransferStatus.Successful -> {
                 Icon(
-                    Icons.Default.KeyboardArrowDown,
-                    null
+                    imageVector = Icons.Default.Check,
+                    tint = MaterialTheme.colorScheme.primary,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+            }
+
+            is TransferStatus.Transferring -> {
+                CircularProgressIndicator(
+                    progress = { fileInfo.transferStatus.value },
+                    modifier = Modifier
+                        .padding(end = 6.dp)
+                        .size(32.dp)
+                )
+            }
+
+            TransferStatus.Loading -> {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(end = 6.dp)
+                        .size(32.dp)
                 )
             }
         }
-
-        TransferStatus.Successful -> {
-            Icon(
-                imageVector = Icons.Default.Check,
-                tint = MaterialTheme.colorScheme.primary,
-                contentDescription = null,
-                modifier = Modifier.padding(end = 6.dp)
-            )
-        }
-
-        is TransferStatus.Transferring -> {
-            CircularProgressIndicator(
-                progress = { fileInfo.transferStatus.value },
-                modifier = Modifier
-                    .padding(end = 6.dp)
-                    .size(32.dp)
-            )
-        }
-
-        TransferStatus.Loading -> {
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .padding(end = 6.dp)
-                    .size(32.dp)
-            )
-        }
     }
+
 
 }
 

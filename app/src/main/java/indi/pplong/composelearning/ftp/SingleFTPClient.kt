@@ -92,8 +92,8 @@ class SingleFTPClient(
         ftpClient.listFiles()
     }
 
-    fun getCurrentPath(): String? {
-        return ftpClient.printWorkingDirectory()
+    fun getCurrentPath(): String {
+        return ftpClient.printWorkingDirectory() ?: ""
     }
 
     fun changeAndGetFiles(
@@ -110,6 +110,19 @@ class SingleFTPClient(
         } catch (_: Exception) {
             onFail()
         }
+    }
+
+    suspend fun getFiles(
+        targetPath: String = ftpClient.printWorkingDirectory()
+    ): Array<out FTPFile>? {
+        try {
+            val listFiles = ftpClient.listFiles(targetPath)
+            return listFiles
+        } catch (_: Exception) {
+
+        }
+        return null
+
     }
 
     suspend fun uploadFile(transferringFile: TransferringFile, inputStream: InputStream) {
@@ -219,9 +232,12 @@ class SingleFTPClient(
     }
 
     // Only in core client
-    suspend fun deleteFile(pathName: String): Boolean {
+    fun deleteFile(pathName: List<String>): Boolean {
         return try {
-            ftpClient.deleteFile(pathName)
+            pathName.forEach { fileName ->
+                ftpClient.deleteFile(fileName)
+            }
+            true
         } catch (_: Exception) {
             false
         }

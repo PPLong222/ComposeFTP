@@ -19,9 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -30,6 +27,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import indi.pplong.composelearning.R
+import indi.pplong.composelearning.core.file.model.FileActionBottomAppBarStatus
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiEffect
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiIntent
@@ -54,6 +53,7 @@ import indi.pplong.composelearning.core.file.viewmodel.FilePathViewModel
 import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.core.util.PermissionUtils
+import indi.pplong.composelearning.sys.ui.sys.widgets.CommonTopBar
 
 /**
  * Description:
@@ -74,7 +74,6 @@ fun BrowsePage(
     Log.d("FilePage", "FilePage: Init ViewModel")
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf(false) }
-    var dialogFileName by remember { mutableStateOf("") }
 
     val context = LocalContext.current
     val openDirectoryLauncher = rememberLauncherForActivityResult(
@@ -138,58 +137,13 @@ fun BrowsePage(
 
                 is FilePathUiEffect.ShowDeleteDialog -> {
                     showDialog = true
-                    dialogFileName = effect.fileName
                 }
 
                 FilePathUiEffect.DismissDeleteDialog -> {
                     showDialog = false
-                    dialogFileName = ""
-                }
-            }
-        }
-    }
-    if (showDialog) {
-        DeleteFileConfirmDialog(
-            onConfirmed = { viewModel.sendIntent(FilePathUiIntent.DeleteFile(fileName = dialogFileName)) },
-            onCancel = { viewModel.sendIntent(FilePathUiIntent.DismissDialog) }
-        )
-    }
-    if (uiState.activeList.isEmpty()) {
-        EmptyConnectionTip()
-    } else {
-        Column(
-            Modifier
-                .background(color = MaterialTheme.colorScheme.surface)
-                .fillMaxWidth()
-        ) {
-            LazyRow {
-                items(uiState.activeList) { server ->
-                    ServerChip(label = server.serverHost)
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-            // Head
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1F)
-                        .padding(horizontal = 8.dp)
-                ) {
-                    HeadPathNavigation(
-                        uiState.path
-                    ) {
-                        viewModel.sendIntent(
-                            FilePathUiIntent.MoveForward(
-                                it
-                            )
-                        )
-                    }
                 }
 
-                UploadButton(upload = {
+                FilePathUiEffect.ShowFileSelectWindow -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         // Android 13 and above
                         requestMediaPermissionsLauncher.launch(
@@ -202,12 +156,78 @@ fun BrowsePage(
                         // Android 12 and below
                         requestExternalStorageLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
                     }
-
-                })
-                Spacer(Modifier.width(8.dp))
+                }
             }
-            // Body
-            DirAndFileList(uiState.fileList, viewModel::sendIntent)
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            CommonTopBar(
+                hasSelect = uiState.appBarStatus == FileActionBottomAppBarStatus.FILE,
+                onClickSelect = {
+                    viewModel.sendIntent(
+                        FilePathUiIntent.AppBar.SelectFileMode(
+                            uiState.appBarStatus == FileActionBottomAppBarStatus.DIRECTORY
+                        )
+                    )
+                }
+            )
+        },
+        bottomBar = {
+            FileActionBottomAppBar(
+                barStatus = uiState.appBarStatus,
+                onClickFAB = viewModel::bottomAppBarFABActionEvents,
+                events = viewModel::bottomAppBarActionEvents
+            )
+        }
+    ) { paddingValues ->
+        if (showDialog) {
+            DeleteFileConfirmDialog(
+                onConfirmed = { viewModel.sendIntent(FilePathUiIntent.DeleteFile) },
+                onCancel = { viewModel.sendIntent(FilePathUiIntent.DismissDialog) }
+            )
+        }
+        if (uiState.activeList.isEmpty()) {
+            EmptyConnectionTip()
+        } else {
+            Column(
+                Modifier
+                    .background(color = MaterialTheme.colorScheme.surface)
+                    .padding(paddingValues)
+                    .fillMaxWidth()
+            ) {
+                // Ban Multi FTP Window
+//                LazyRow {
+//                    items(uiState.activeList) { server ->
+//                        ServerChip(label = server.serverHost)
+//                    }
+//                }
+                // Head
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1F)
+                            .padding(horizontal = 8.dp)
+                    ) {
+                        HeadPathNavigation(
+                            uiState.path
+                        ) {
+                            viewModel.sendIntent(
+                                FilePathUiIntent.MoveForward(
+                                    it
+                                )
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                // Body
+                DirAndFileList(uiState, viewModel::sendIntent)
+            }
         }
     }
 }
