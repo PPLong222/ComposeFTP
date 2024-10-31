@@ -2,6 +2,11 @@ package indi.pplong.composelearning.core.file.ui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -30,15 +35,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import indi.pplong.composelearning.R
-import indi.pplong.composelearning.core.file.model.FileActionBottomAppBarStatus
+import indi.pplong.composelearning.core.file.model.FileSelectStatus
+import indi.pplong.composelearning.core.util.VibrationUtil
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 /**
@@ -76,9 +86,9 @@ val directBottomAppBarList = listOf(
 @Composable
 @Preview
 fun FileActionBottomAppBar(
-    barStatus: FileActionBottomAppBarStatus = FileActionBottomAppBarStatus.DIRECTORY,
+    barStatus: FileSelectStatus = FileSelectStatus.Single,
     modifier: Modifier = Modifier,
-    onClickFAB: (FileActionBottomAppBarStatus) -> Unit = {},
+    onClickFAB: (FileSelectStatus) -> Unit = {},
     events: (FileBottomAppBarAction) -> Unit = {},
     scrollBehavior: BottomAppBarScrollBehavior? = null
 ) {
@@ -92,8 +102,29 @@ fun FileActionBottomAppBar(
 
     )
     val list =
-        if (barStatus == FileActionBottomAppBarStatus.DIRECTORY) directBottomAppBarList.toList() else fileBottomAppBarList.toList()
+        if (barStatus == FileSelectStatus.Single) directBottomAppBarList.toList() else fileBottomAppBarList.toList()
 
+    var beginToShake by remember { mutableStateOf(false) }
+    val infiniteTransition = rememberInfiniteTransition()
+    val rotationAngle by infiniteTransition.animateFloat(
+        initialValue = -10F,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(300, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    ).run { if (beginToShake) this else remember { mutableStateOf(0F) } }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(beginToShake) {
+        if (beginToShake) {
+            scope.launch {
+                delay(900)
+                beginToShake = false
+            }
+
+        }
+    }
+    val context = LocalContext.current
     BottomAppBar(
         actions = {
             Row {
@@ -159,12 +190,18 @@ fun FileActionBottomAppBar(
                         .togetherWith(fadeOut(animationSpec = tween(0)))
                 }) { status ->
                 when (status) {
-                    FileActionBottomAppBarStatus.DIRECTORY -> {
+                    FileSelectStatus.Single -> {
+
                         FloatingActionButton(
                             shape = RoundedCornerShape(8.dp),
-                            onClick = { onClickFAB(status) },
+                            onClick = {
+                                VibrationUtil.triggerVibration(context)
+                                beginToShake = true
+//                                onClickFAB(status)
+                            },
                             containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
-                            elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
+                            elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation(),
+                            modifier = Modifier.rotate(rotationAngle)
                         ) {
                             Icon(
                                 painter =
@@ -174,7 +211,7 @@ fun FileActionBottomAppBar(
                         }
                     }
 
-                    FileActionBottomAppBarStatus.FILE -> {
+                    FileSelectStatus.Multiple -> {
                         FloatingActionButton(
                             shape = RoundedCornerShape(8.dp),
                             onClick = { onClickFAB(status) },

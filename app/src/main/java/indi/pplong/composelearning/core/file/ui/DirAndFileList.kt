@@ -57,8 +57,8 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import indi.pplong.composelearning.core.base.ui.PopupSimpleItem
 import indi.pplong.composelearning.core.cache.TransferStatus
-import indi.pplong.composelearning.core.file.model.FileActionBottomAppBarStatus
 import indi.pplong.composelearning.core.file.model.FileItemInfo
+import indi.pplong.composelearning.core.file.model.FileSelectStatus
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiIntent
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiState
 import indi.pplong.composelearning.core.util.DateUtil
@@ -86,7 +86,7 @@ fun DirAndFileList(
                 fileInfo = item,
                 onIntent = onIntent,
                 uiState.fileList.last() == item,
-                isOnSelectMode = uiState.appBarStatus == FileActionBottomAppBarStatus.FILE,
+                isOnSelectMode = uiState.appBarStatus == FileSelectStatus.Multiple,
                 isSelect = uiState.selectedFileList.contains(item.name)
             )
         }
@@ -171,7 +171,7 @@ fun CommonFileItem(
                             if (!isOnSelectMode) {
                                 if (fileInfo.isDir) {
                                     onIntent(
-                                        FilePathUiIntent.MoveForward(
+                                        FilePathUiIntent.Browser.MoveForward(
                                             fileInfo.pathPrefix
                                                 .plus("/")
                                                 .plus(fileInfo.name)
@@ -180,7 +180,7 @@ fun CommonFileItem(
                                 }
                             } else {
                                 onIntent(
-                                    FilePathUiIntent.OnFileSelect(fileInfo.name, !isSelect)
+                                    FilePathUiIntent.Browser.OnFileSelect(fileInfo.name, !isSelect)
                                 )
                             }
 
@@ -265,7 +265,7 @@ fun FileTailIconItem(
                             FileUtil.getFileUriInDownloadDir(context, fileInfo.name)?.let { uri ->
                                 context.contentResolver.openOutputStream(uri)?.let { stream ->
                                     onIntent(
-                                        FilePathUiIntent.Download(
+                                        FilePathUiIntent.Browser.Download(
                                             stream,
                                             fileInfo,
                                             uri.toString()

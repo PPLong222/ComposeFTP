@@ -9,6 +9,9 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
@@ -151,4 +154,22 @@ object FileUtil {
 object ServerPortInfo {
     const val MAX_PORT = 65535
     const val MIN_PORT = 0
+}
+
+object VibrationUtil {
+    fun triggerVibration(context: Context) {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager =
+                context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+            vibratorManager?.defaultVibrator
+        } else {
+            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+        vibrator?.vibrate(
+            VibrationEffect.createWaveform(
+                longArrayOf(0, 100, 200, 100),
+                VibrationEffect.DEFAULT_AMPLITUDE
+            )
+        )
+    }
 }
