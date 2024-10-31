@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -23,8 +24,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -45,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import indi.pplong.composelearning.R
+import indi.pplong.composelearning.core.base.state.LoadingState
 import indi.pplong.composelearning.core.file.model.FileActionBottomAppBarStatus
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiEffect
@@ -61,6 +66,7 @@ import indi.pplong.composelearning.sys.ui.sys.widgets.CommonTopBar
  * @date 9/28/24 11:51 AM
  */
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrowsePage(
     host: String = "",
@@ -131,8 +137,9 @@ fun BrowsePage(
     LaunchedEffect(viewModel.uiEffect) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
-                is FilePathUiEffect.ActionFailed -> {
-
+                is FilePathUiEffect.OnDeleteFile -> {
+                    showDialog = false
+                    viewModel.sendIntent(FilePathUiIntent.Refresh)
                 }
 
                 is FilePathUiEffect.ShowDeleteDialog -> {
@@ -160,7 +167,7 @@ fun BrowsePage(
             }
         }
     }
-
+    val scrollState = BottomAppBarDefaults.exitAlwaysScrollBehavior()
     Scaffold(
         topBar = {
             CommonTopBar(
@@ -178,9 +185,10 @@ fun BrowsePage(
             FileActionBottomAppBar(
                 barStatus = uiState.appBarStatus,
                 onClickFAB = viewModel::bottomAppBarFABActionEvents,
-                events = viewModel::bottomAppBarActionEvents
+                events = viewModel::bottomAppBarActionEvents,
+                scrollBehavior = scrollState
             )
-        }
+        },
     ) { paddingValues ->
         if (showDialog) {
             DeleteFileConfirmDialog(
@@ -225,8 +233,22 @@ fun BrowsePage(
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-                // Body
-                DirAndFileList(uiState, viewModel::sendIntent)
+                if (uiState.loadingState == LoadingState.LOADING) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(64.dp),
+                                strokeWidth = 6.dp
+                            )
+                            Text("Loading...", style = MaterialTheme.typography.headlineLarge)
+                        }
+
+                    }
+                } else {
+                    // Body
+                    DirAndFileList(uiState, viewModel::sendIntent, scrollState)
+                }
+
             }
         }
     }
@@ -282,20 +304,30 @@ fun EmptyConnectionTip(modifier: Modifier = Modifier) {
 fun DeleteFileConfirmDialog(
     modifier: Modifier = Modifier,
     onConfirmed: () -> Unit = {},
-    onCancel: () -> Unit = {}
-) {
+    onCancel: () -> Unit = {},
+
+    ) {
+    var isDeleting by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = {
             println("123")
         },
         confirmButton = {
-            Button(onClick = onConfirmed) {
-                Text("DELETE")
+            if (!isDeleting) {
+                Button(onClick = {
+                    isDeleting = true
+                    onConfirmed()
+                }) {
+                    Text("DELETE")
+                }
             }
+
         },
         dismissButton = {
-            Button(onClick = onCancel) {
-                Text("Back")
+            if (!isDeleting) {
+                Button(onClick = onCancel) {
+                    Text("Back")
+                }
             }
         },
         icon = {
@@ -305,7 +337,16 @@ fun DeleteFileConfirmDialog(
             Text("Delete Confirmation")
         },
         text = {
-            Text("Are you sure you are going to delete File?")
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Are you sure you are going to delete File?")
+                if (isDeleting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+            }
+
+
         }
     )
 }

@@ -18,6 +18,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.BottomAppBarDefaults
+import androidx.compose.material3.BottomAppBarScrollBehavior
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -70,13 +72,15 @@ val directBottomAppBarList = listOf(
 )
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Preview
 fun FileActionBottomAppBar(
     barStatus: FileActionBottomAppBarStatus = FileActionBottomAppBarStatus.DIRECTORY,
     modifier: Modifier = Modifier,
     onClickFAB: (FileActionBottomAppBarStatus) -> Unit = {},
-    events: (FileBottomAppBarAction) -> Unit = {}
+    events: (FileBottomAppBarAction) -> Unit = {},
+    scrollBehavior: BottomAppBarScrollBehavior? = null
 ) {
     val map = mapOf(
         FileBottomAppBarAction.REFRESH to rememberVectorPainter(Icons.Default.Refresh),
@@ -89,9 +93,6 @@ fun FileActionBottomAppBar(
     )
     val list =
         if (barStatus == FileActionBottomAppBarStatus.DIRECTORY) directBottomAppBarList.toList() else fileBottomAppBarList.toList()
-
-    println(barStatus)
-    list.forEach { println(it.toString()) }
 
     BottomAppBar(
         actions = {
@@ -191,5 +192,6 @@ fun FileActionBottomAppBar(
             }
 
         },
+        scrollBehavior = scrollBehavior
     )
 }

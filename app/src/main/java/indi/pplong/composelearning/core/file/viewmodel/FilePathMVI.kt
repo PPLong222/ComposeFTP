@@ -57,6 +57,6 @@ sealed class FilePathUiIntent : UiIntent {
 sealed class FilePathUiEffect : UiEffect {
     data class ShowDeleteDialog(val fileName: Set<String>) : FilePathUiEffect()
     data object DismissDeleteDialog : FilePathUiEffect()
-    data class ActionFailed(val text: String) : FilePathUiEffect()
+    data object OnDeleteFile : FilePathUiEffect()
     data object ShowFileSelectWindow : FilePathUiEffect()
 }

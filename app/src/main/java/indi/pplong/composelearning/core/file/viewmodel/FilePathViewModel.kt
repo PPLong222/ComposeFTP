@@ -8,7 +8,6 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import indi.pplong.composelearning.core.base.mvi.BaseViewModel
 import indi.pplong.composelearning.core.base.state.LoadingState
-import indi.pplong.composelearning.core.base.state.RequestingState
 import indi.pplong.composelearning.core.cache.FTPClientCache
 import indi.pplong.composelearning.core.cache.FTPServerPool
 import indi.pplong.composelearning.core.cache.TransferStatus
@@ -18,6 +17,7 @@ import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.model.toFileItemInfo
 import indi.pplong.composelearning.core.file.ui.FileBottomAppBarAction
 import indi.pplong.composelearning.core.load.model.TransferringFile
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.InputStream
 import java.io.OutputStream
@@ -133,11 +133,10 @@ class FilePathViewModel @AssistedInject constructor(
 
     private fun deleteFile() {
         launchOnIO {
-            setState { copy(actionLoadingState = RequestingState.REQUEST) }
             val deleteFile = cache.coreFTPClient.deleteFile(uiState.value.selectedFileList.toList())
-            setState { copy(actionLoadingState = RequestingState.DONE) }
+            delay(2000)
             if (deleteFile) {
-                sendEffect { FilePathUiEffect.ActionFailed("Failed") }
+                sendEffect { FilePathUiEffect.OnDeleteFile }
             }
         }
 

@@ -25,12 +25,14 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -45,15 +47,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import indi.pplong.composelearning.R
 import indi.pplong.composelearning.core.base.ui.PopupSimpleItem
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.FileActionBottomAppBarStatus
@@ -70,13 +71,15 @@ import indi.pplong.composelearning.core.util.FileUtil
  */
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DirAndFileList(
     uiState: FilePathUiState,
     onIntent: (FilePathUiIntent) -> Unit,
+    scrollBehavior: BottomAppBarScrollBehavior
 ) {
     LazyColumn(
-        modifier = Modifier
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     ) {
         items(uiState.fileList) { item ->
             CommonFileItem(
@@ -110,7 +113,6 @@ fun CommonFileItem(
         targetValue = if (isFadeIn) 1f else 0f,
         animationSpec = tween(durationMillis = 250)
     )
-    println(alpha)
     Box {
         Column(
             Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
@@ -129,7 +131,7 @@ fun CommonFileItem(
                 supportingContent = {
                     Row {
                         Text(
-                            stringResource(R.string.time) + DateUtil.getFormatDate(
+                            DateUtil.getFormatDate(
                                 fileInfo.timeStamp,
                                 fileInfo.timeStampZoneId
                             ),
@@ -138,7 +140,7 @@ fun CommonFileItem(
                         )
                         if (!fileInfo.isDir) {
                             Text(
-                                stringResource(R.string.size) + FileUtil.getFileSize(fileInfo.size),
+                                FileUtil.getFileSize(fileInfo.size),
                                 modifier = Modifier.padding(start = 4.dp),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
