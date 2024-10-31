@@ -5,7 +5,7 @@ package indi.pplong.composelearning.core.file.model
  * @author PPLong
  * @date 10/30/24 11:21 AM
  */
-enum class FileActionBottomAppBarStatus {
-    DIRECTORY,
-    FILE
+enum class FileSelectStatus {
+    Single,
+    Multiple
 }

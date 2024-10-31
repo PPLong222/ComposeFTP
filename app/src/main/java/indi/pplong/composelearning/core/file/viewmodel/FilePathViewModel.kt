@@ -1,6 +1,7 @@
 package indi.pplong.composelearning.core.file.viewmodel
 
 import android.util.Log
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.runtime.toMutableStateList
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
@@ -11,9 +12,8 @@ import indi.pplong.composelearning.core.base.state.LoadingState
 import indi.pplong.composelearning.core.cache.FTPClientCache
 import indi.pplong.composelearning.core.cache.FTPServerPool
 import indi.pplong.composelearning.core.cache.TransferStatus
-import indi.pplong.composelearning.core.file.model.ActiveServer
-import indi.pplong.composelearning.core.file.model.FileActionBottomAppBarStatus
 import indi.pplong.composelearning.core.file.model.FileItemInfo
+import indi.pplong.composelearning.core.file.model.FileSelectStatus
 import indi.pplong.composelearning.core.file.model.toFileItemInfo
 import indi.pplong.composelearning.core.file.ui.FileBottomAppBarAction
 import indi.pplong.composelearning.core.load.model.TransferringFile
@@ -69,21 +69,6 @@ class FilePathViewModel @AssistedInject constructor(
             }
 
         }
-
-        launchOnIO {
-            FTPServerPool.serverFTPMap.collect {
-                setState {
-                    copy(activeList = it.values.toList().map { server ->
-                        ActiveServer(
-                            serverHost = server.coreFTPClient.host,
-                            serverNickname = "123",
-                            hasUploadNode = server.hasUploadNode,
-                            hasDownloadNode = server.hasDownloadNode
-                        )
-                    })
-                }
-            }
-        }
     }
 
     override fun initialState(): FilePathUiState {
@@ -93,50 +78,93 @@ class FilePathViewModel @AssistedInject constructor(
 
     override suspend fun handleIntent(intent: FilePathUiIntent) {
         when (intent) {
-            is FilePathUiIntent.MoveForward -> onPathChanged(intent.path)
-            is FilePathUiIntent.Download -> {
+            is FilePathUiIntent.Browser -> handleBrowserIntent(intent)
+
+            is FilePathUiIntent.AppBar -> handleAppBarIntent(intent)
+
+            is FilePathUiIntent.Dialog -> handleDialogIntent(intent)
+
+            is FilePathUiIntent.SnackBarHost -> handleSnackBarIntent(intent)
+        }
+    }
+
+    private fun handleBrowserIntent(intent: FilePathUiIntent.Browser) {
+        when (intent) {
+            is FilePathUiIntent.Browser.MoveForward -> onPathChanged(intent.path)
+            is FilePathUiIntent.Browser.Download -> {
                 downloadSingleFile(intent.outputStream, intent.fileItemInfo, intent.localUri)
             }
 
-            is FilePathUiIntent.Upload -> {
+            is FilePathUiIntent.Browser.OnFileSelect -> onFileSelected(
+                intent.fileName,
+                intent.select
+            )
+        }
+    }
+
+    private fun handleAppBarIntent(intent: FilePathUiIntent.AppBar) {
+        when (intent) {
+            is FilePathUiIntent.AppBar.Upload -> {
                 uploadSingleFile(intent.transferringFile, intent.inputStream)
-            }
-
-            is FilePathUiIntent.DeleteFile -> deleteFile()
-            is FilePathUiIntent.DismissDialog -> sendEffect {
-                FilePathUiEffect.DismissDeleteDialog
-            }
-
-            is FilePathUiIntent.OpenDeleteFileDialog -> {
-                sendEffect {
-                    FilePathUiEffect.ShowDeleteDialog(intent.fileName)
-                }
-            }
-
-            FilePathUiIntent.Refresh -> {
-                refresh()
-            }
-
-            FilePathUiIntent.OpenFileSelectWindow -> {
-                sendEffect { FilePathUiEffect.ShowFileSelectWindow }
-            }
-
-            is FilePathUiIntent.OnFileSelect -> {
-                onFileSelected(intent.fileName, intent.select)
             }
 
             is FilePathUiIntent.AppBar.SelectFileMode -> {
                 onSelectModeChanged(intent.select)
             }
+
+            is FilePathUiIntent.AppBar.OpenDeleteFileDialog -> {
+                sendEffect {
+                    FilePathUiEffect.ShowDeleteDialog(intent.fileName)
+                }
+            }
+
+            FilePathUiIntent.AppBar.OpenFileSelectWindow -> {
+                sendEffect { FilePathUiEffect.ShowFileSelectWindow }
+            }
+
+            FilePathUiIntent.AppBar.DownloadMultipleFiles -> {}
+
+
+            FilePathUiIntent.AppBar.Refresh -> refresh()
+        }
+    }
+
+    private fun handleDialogIntent(intent: FilePathUiIntent.Dialog) {
+        when (intent) {
+            FilePathUiIntent.Dialog.DeleteFile -> deleteFile()
+            FilePathUiIntent.Dialog.DismissDialog -> sendEffect {
+                FilePathUiEffect.DismissDeleteDialog
+            }
+        }
+    }
+
+    private fun handleSnackBarIntent(intent: FilePathUiIntent.SnackBarHost) {
+        when (intent) {
+            FilePathUiIntent.SnackBarHost.PerformClick -> {}
         }
     }
 
     private fun deleteFile() {
         launchOnIO {
+            val fileSize = uiState.value.selectedFileList.size
             val deleteFile = cache.coreFTPClient.deleteFile(uiState.value.selectedFileList.toList())
             delay(2000)
             if (deleteFile) {
+                setState {
+                    copy(
+                        selectedFileList = setOf(),
+                        appBarStatus = FileSelectStatus.Single
+                    )
+                }
                 sendEffect { FilePathUiEffect.OnDeleteFile }
+                sendEffect {
+                    FilePathUiEffect.ShowSnackBar(
+                        message = "You delete ${fileSize} file",
+                        actionLabel = "Undo",
+                        withDismissAction = false,
+                        duration = SnackbarDuration.Short
+                    )
+                }
             }
         }
 
@@ -242,6 +270,10 @@ class FilePathViewModel @AssistedInject constructor(
         }
     }
 
+    private fun downloadMultipleFiles() {
+
+    }
+
     @AssistedFactory
     interface FilePathViewModelFactory {
         fun create(host: String): FilePathViewModel
@@ -251,11 +283,11 @@ class FilePathViewModel @AssistedInject constructor(
     fun bottomAppBarActionEvents(fileBottomAppBarAction: FileBottomAppBarAction) {
         when (fileBottomAppBarAction) {
             FileBottomAppBarAction.REFRESH -> {
-                sendIntent(FilePathUiIntent.Refresh)
+                sendIntent(FilePathUiIntent.AppBar.Refresh)
             }
 
             FileBottomAppBarAction.DELETE -> {
-                sendIntent(FilePathUiIntent.OpenDeleteFileDialog(uiState.value.selectedFileList))
+                sendIntent(FilePathUiIntent.AppBar.OpenDeleteFileDialog(uiState.value.selectedFileList))
             }
 
             else -> {}
@@ -264,26 +296,26 @@ class FilePathViewModel @AssistedInject constructor(
 
     // Maybe it's better to be placed in Compose File
     fun bottomAppBarFABActionEvents(
-        status: FileActionBottomAppBarStatus
+        status: FileSelectStatus
     ) {
         when (status) {
-            FileActionBottomAppBarStatus.DIRECTORY -> {
-                sendIntent(FilePathUiIntent.OpenFileSelectWindow)
+            FileSelectStatus.Single -> {
+                sendIntent(FilePathUiIntent.AppBar.OpenFileSelectWindow)
             }
 
-            FileActionBottomAppBarStatus.FILE -> {
-
+            FileSelectStatus.Multiple -> {
+                sendIntent(FilePathUiIntent.AppBar.DownloadMultipleFiles)
             }
         }
     }
 
     private fun onSelectModeChanged(select: Boolean) {
-        if (select.xor(uiState.value.appBarStatus == FileActionBottomAppBarStatus.DIRECTORY)) {
+        if (select.xor(uiState.value.appBarStatus == FileSelectStatus.Single)) {
             return
         }
         setState {
             copy(
-                appBarStatus = if (select) FileActionBottomAppBarStatus.FILE else FileActionBottomAppBarStatus.DIRECTORY,
+                appBarStatus = if (select) FileSelectStatus.Multiple else FileSelectStatus.Single,
                 selectedFileList = mutableSetOf()
             )
         }

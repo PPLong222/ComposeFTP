@@ -32,12 +32,15 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +53,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import indi.pplong.composelearning.R
 import indi.pplong.composelearning.core.base.state.LoadingState
-import indi.pplong.composelearning.core.file.model.FileActionBottomAppBarStatus
+import indi.pplong.composelearning.core.file.model.FileSelectStatus
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiEffect
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiIntent
@@ -59,6 +62,7 @@ import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.core.util.PermissionUtils
 import indi.pplong.composelearning.sys.ui.sys.widgets.CommonTopBar
+import kotlinx.coroutines.launch
 
 /**
  * Description:
@@ -91,7 +95,7 @@ fun BrowsePage(
             val fileName = FileUtil.getFileName(context, uri)
             context.contentResolver.openInputStream(uri)?.let { stream ->
                 viewModel.sendIntent(
-                    FilePathUiIntent.Upload(
+                    FilePathUiIntent.AppBar.Upload(
                         TransferringFile(
                             transferredFileItem = TransferredFileItem(
                                 remoteName = fileName,
@@ -133,13 +137,14 @@ fun BrowsePage(
             // Permission denied
         }
     }
-
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(viewModel.uiEffect) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
                 is FilePathUiEffect.OnDeleteFile -> {
                     showDialog = false
-                    viewModel.sendIntent(FilePathUiIntent.Refresh)
+                    viewModel.sendIntent(FilePathUiIntent.AppBar.Refresh)
                 }
 
                 is FilePathUiEffect.ShowDeleteDialog -> {
@@ -164,18 +169,30 @@ fun BrowsePage(
                         requestExternalStorageLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
                     }
                 }
+
+                is FilePathUiEffect.ShowSnackBar -> {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            effect.message,
+                            effect.actionLabel,
+                            effect.withDismissAction,
+                            effect.duration
+                        )
+                    }
+                }
             }
         }
     }
     val scrollState = BottomAppBarDefaults.exitAlwaysScrollBehavior()
+
     Scaffold(
         topBar = {
             CommonTopBar(
-                hasSelect = uiState.appBarStatus == FileActionBottomAppBarStatus.FILE,
+                hasSelect = uiState.appBarStatus == FileSelectStatus.Multiple,
                 onClickSelect = {
                     viewModel.sendIntent(
                         FilePathUiIntent.AppBar.SelectFileMode(
-                            uiState.appBarStatus == FileActionBottomAppBarStatus.DIRECTORY
+                            uiState.appBarStatus == FileSelectStatus.Single
                         )
                     )
                 }
@@ -189,68 +206,69 @@ fun BrowsePage(
                 scrollBehavior = scrollState
             )
         },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        }
     ) { paddingValues ->
         if (showDialog) {
             DeleteFileConfirmDialog(
-                onConfirmed = { viewModel.sendIntent(FilePathUiIntent.DeleteFile) },
-                onCancel = { viewModel.sendIntent(FilePathUiIntent.DismissDialog) }
+                onConfirmed = { viewModel.sendIntent(FilePathUiIntent.Dialog.DeleteFile) },
+                onCancel = { viewModel.sendIntent(FilePathUiIntent.Dialog.DismissDialog) }
             )
         }
-        if (uiState.activeList.isEmpty()) {
-            EmptyConnectionTip()
-        } else {
-            Column(
-                Modifier
-                    .background(color = MaterialTheme.colorScheme.surface)
-                    .padding(paddingValues)
-                    .fillMaxWidth()
-            ) {
-                // Ban Multi FTP Window
+
+        Column(
+            Modifier
+                .background(color = MaterialTheme.colorScheme.surface)
+                .padding(paddingValues)
+                .fillMaxWidth()
+        ) {
+            // Ban Multi FTP Window
 //                LazyRow {
 //                    items(uiState.activeList) { server ->
 //                        ServerChip(label = server.serverHost)
 //                    }
 //                }
-                // Head
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+            // Head
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1F)
+                        .padding(horizontal = 8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1F)
-                            .padding(horizontal = 8.dp)
+                    HeadPathNavigation(
+                        uiState.path
                     ) {
-                        HeadPathNavigation(
-                            uiState.path
-                        ) {
-                            viewModel.sendIntent(
-                                FilePathUiIntent.MoveForward(
-                                    it
-                                )
+                        viewModel.sendIntent(
+                            FilePathUiIntent.Browser.MoveForward(
+                                it
                             )
-                        }
+                        )
                     }
                 }
-                Spacer(Modifier.height(16.dp))
-                if (uiState.loadingState == LoadingState.LOADING) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(64.dp),
-                                strokeWidth = 6.dp
-                            )
-                            Text("Loading...", style = MaterialTheme.typography.headlineLarge)
-                        }
-
-                    }
-                } else {
-                    // Body
-                    DirAndFileList(uiState, viewModel::sendIntent, scrollState)
-                }
-
             }
+            Spacer(Modifier.height(16.dp))
+            if (uiState.loadingState == LoadingState.LOADING) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(64.dp),
+                            strokeWidth = 6.dp
+                        )
+                        Text("Loading...", style = MaterialTheme.typography.headlineLarge)
+                    }
+
+                }
+            } else {
+                // Body
+                DirAndFileList(uiState, viewModel::sendIntent, scrollState)
+            }
+
         }
+
     }
 }
 
