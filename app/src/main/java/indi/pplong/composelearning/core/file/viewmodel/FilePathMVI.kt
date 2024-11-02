@@ -23,7 +23,9 @@ data class FilePathUiState(
     val loadingState: LoadingState = LoadingState.LOADING,
     val actionLoadingState: RequestingState = RequestingState.DONE,
     val appBarStatus: FileSelectStatus = FileSelectStatus.Single,
-    val selectedFileList: Set<String> = mutableSetOf()
+    val selectedFileList: Set<String> = mutableSetOf(),
+    val selectDirList: Set<String> = mutableSetOf(),
+    val createDirDialog: CreateDirDialog = CreateDirDialog()
 ) : UiState
 
 sealed class FilePathUiIntent : UiIntent {
@@ -44,20 +46,30 @@ sealed class FilePathUiIntent : UiIntent {
         data object OpenFileSelectWindow : AppBar()
         data object Refresh : AppBar()
         data class SelectFileMode(val select: Boolean) : AppBar()
-        data object DownloadMultipleFiles :
+        data class DownloadMultipleFiles(
+            val outputStreamList: List<OutputStream>,
+            val localUriList: List<String>
+        ) :
             AppBar()
 
         data class Upload(val transferringFile: TransferringFile, val inputStream: InputStream) :
             AppBar()
+
+        data object ClickCreateDirIcon : AppBar()
+
     }
 
     sealed class Dialog : FilePathUiIntent() {
+        // Delete File Dialog
         data object DismissDialog : Dialog()
 
         /**
          * @param fileName: fileName of current path
          */
         data object DeleteFile : Dialog()
+
+        // Create Directory Dialog
+        data class CreateDirectory(val fileName: String) : Dialog()
     }
 
     sealed class SnackBarHost : FilePathUiIntent() {
@@ -77,3 +89,9 @@ sealed class FilePathUiEffect : UiEffect {
         val duration: SnackbarDuration = if (actionLabel == null) SnackbarDuration.Short else SnackbarDuration.Indefinite
     ) : FilePathUiEffect()
 }
+
+data class CreateDirDialog(
+    val isShow: Boolean = false,
+    val fileName: String = "",
+    val loadingStatus: LoadingState = LoadingState.INITIAL
+)

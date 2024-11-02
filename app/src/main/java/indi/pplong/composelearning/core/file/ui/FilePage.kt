@@ -21,9 +21,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -180,6 +177,7 @@ fun BrowsePage(
                         )
                     }
                 }
+
             }
         }
     }
@@ -213,6 +211,13 @@ fun BrowsePage(
         if (showDialog) {
             DeleteFileConfirmDialog(
                 onConfirmed = { viewModel.sendIntent(FilePathUiIntent.Dialog.DeleteFile) },
+                onCancel = { viewModel.sendIntent(FilePathUiIntent.Dialog.DismissDialog) }
+            )
+        }
+        if (uiState.createDirDialog.isShow) {
+            CreateDirDialog(
+                loadingState = uiState.createDirDialog.loadingStatus,
+                onConfirmed = { viewModel.sendIntent(FilePathUiIntent.Dialog.CreateDirectory(it)) },
                 onCancel = { viewModel.sendIntent(FilePathUiIntent.Dialog.DismissDialog) }
             )
         }
@@ -317,54 +322,3 @@ fun EmptyConnectionTip(modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
-@Preview
-fun DeleteFileConfirmDialog(
-    modifier: Modifier = Modifier,
-    onConfirmed: () -> Unit = {},
-    onCancel: () -> Unit = {},
-
-    ) {
-    var isDeleting by remember { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = {
-            println("123")
-        },
-        confirmButton = {
-            if (!isDeleting) {
-                Button(onClick = {
-                    isDeleting = true
-                    onConfirmed()
-                }) {
-                    Text("DELETE")
-                }
-            }
-
-        },
-        dismissButton = {
-            if (!isDeleting) {
-                Button(onClick = onCancel) {
-                    Text("Back")
-                }
-            }
-        },
-        icon = {
-            Icon(Icons.Default.Info, contentDescription = null)
-        },
-        title = {
-            Text("Delete Confirmation")
-        },
-        text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Are you sure you are going to delete File?")
-                if (isDeleting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
-            }
-
-
-        }
-    )
-}

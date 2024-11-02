@@ -6,6 +6,7 @@ package indi.pplong.composelearning.core.base.state
  * @date 9/30/24 12:10 PM
  */
 enum class LoadingState {
+    INITIAL,
     LOADING,
     FAIL,
     SUCCESS

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.runBlocking
 import org.apache.commons.net.ftp.FTP
 import org.apache.commons.net.ftp.FTPClient
+import org.apache.commons.net.ftp.FTPConnectionClosedException
 import org.apache.commons.net.ftp.FTPFile
 import org.apache.commons.net.io.CopyStreamAdapter
 import java.io.IOException
@@ -241,6 +242,34 @@ class SingleFTPClient(
         } catch (_: Exception) {
             false
         }
+    }
 
+    // Only in core client
+    fun deleteDirectory(pathName: List<String>): Boolean {
+        return try {
+            pathName.forEach { fileName ->
+                ftpClient.removeDirectory(fileName)
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun isTimeOut(): Boolean {
+        try {
+            ftpClient.printWorkingDirectory()
+        } catch (e: FTPConnectionClosedException) {
+            return true
+        }
+        return false
+    }
+
+    fun createDirectory(dirName: String): Boolean {
+        return try {
+            ftpClient.makeDirectory(dirName)
+        } catch (_: Exception) {
+            false
+        }
     }
 }

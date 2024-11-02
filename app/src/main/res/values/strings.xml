@@ -16,4 +16,6 @@
     <string name="download">Download</string>
     <string name="upload">Upload</string>
     <string name="nothing_is_here">Nothing is here...</string>
+    <string name="cancel">Cancel</string>
+    <string name="create">Create</string>
 </resources>

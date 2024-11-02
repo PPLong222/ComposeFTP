@@ -122,18 +122,29 @@ class FilePathViewModel @AssistedInject constructor(
                 sendEffect { FilePathUiEffect.ShowFileSelectWindow }
             }
 
-            FilePathUiIntent.AppBar.DownloadMultipleFiles -> {}
+            is FilePathUiIntent.AppBar.DownloadMultipleFiles -> {}
 
 
             FilePathUiIntent.AppBar.Refresh -> refresh()
+            FilePathUiIntent.AppBar.ClickCreateDirIcon -> {
+                setState { copy(createDirDialog = createDirDialog.copy(isShow = true)) }
+            }
         }
     }
 
     private fun handleDialogIntent(intent: FilePathUiIntent.Dialog) {
         when (intent) {
             FilePathUiIntent.Dialog.DeleteFile -> deleteFile()
-            FilePathUiIntent.Dialog.DismissDialog -> sendEffect {
-                FilePathUiEffect.DismissDeleteDialog
+            FilePathUiIntent.Dialog.DismissDialog -> {
+                // TODO: Unify to UiState
+                sendEffect {
+                    FilePathUiEffect.DismissDeleteDialog
+                }
+                handleDismissDialog()
+            }
+
+            is FilePathUiIntent.Dialog.CreateDirectory -> {
+                createDirectory(intent.fileName)
             }
         }
     }
@@ -274,6 +285,26 @@ class FilePathViewModel @AssistedInject constructor(
 
     }
 
+    private fun createDirectory(dirName: String) {
+        launchOnIO {
+            setState { copy(createDirDialog = createDirDialog.copy(loadingStatus = LoadingState.LOADING)) }
+            val res = cache.coreFTPClient.createDirectory(dirName)
+            if (res) {
+                setState { copy(createDirDialog = createDirDialog.copy(loadingStatus = LoadingState.SUCCESS)) }
+                delay(1000)
+                setState { copy(createDirDialog = CreateDirDialog()) }
+                refresh()
+            } else {
+                setState { copy(createDirDialog = createDirDialog.copy(loadingStatus = LoadingState.FAIL)) }
+            }
+        }
+
+    }
+
+    private fun handleDismissDialog() {
+        setState { copy(createDirDialog = CreateDirDialog()) }
+    }
+
     @AssistedFactory
     interface FilePathViewModelFactory {
         fun create(host: String): FilePathViewModel
@@ -290,6 +321,10 @@ class FilePathViewModel @AssistedInject constructor(
                 sendIntent(FilePathUiIntent.AppBar.OpenDeleteFileDialog(uiState.value.selectedFileList))
             }
 
+            FileBottomAppBarAction.CREATE_FOLDER -> {
+                sendIntent(FilePathUiIntent.AppBar.ClickCreateDirIcon)
+            }
+
             else -> {}
         }
     }
@@ -304,7 +339,7 @@ class FilePathViewModel @AssistedInject constructor(
             }
 
             FileSelectStatus.Multiple -> {
-                sendIntent(FilePathUiIntent.AppBar.DownloadMultipleFiles)
+//                sendIntent(FilePathUiIntent.AppBar.DownloadMultipleFiles)
             }
         }
     }
