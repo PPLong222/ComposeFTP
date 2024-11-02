@@ -38,7 +38,8 @@ sealed class FilePathUiIntent : UiIntent {
         ) :
             Browser()
 
-        data class OnFileSelect(val fileName: String, val select: Boolean) : Browser()
+        data class OnFileSelect(val fileName: String, val select: Boolean, val isDir: Boolean) :
+            Browser()
     }
 
     sealed class AppBar : FilePathUiIntent() {

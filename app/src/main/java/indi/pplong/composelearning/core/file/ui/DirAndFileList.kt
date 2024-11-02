@@ -87,7 +87,10 @@ fun DirAndFileList(
                 onIntent = onIntent,
                 uiState.fileList.last() == item,
                 isOnSelectMode = uiState.appBarStatus == FileSelectStatus.Multiple,
-                isSelect = uiState.selectedFileList.contains(item.name)
+                isSelect = (item.isDir.not() && uiState.selectedFileList.contains(item.name)) || (item.isDir && uiState.selectDirList.contains(
+                    item.name
+                ))
+
             )
         }
 
@@ -180,7 +183,11 @@ fun CommonFileItem(
                                 }
                             } else {
                                 onIntent(
-                                    FilePathUiIntent.Browser.OnFileSelect(fileInfo.name, !isSelect)
+                                    FilePathUiIntent.Browser.OnFileSelect(
+                                        fileInfo.name,
+                                        !isSelect,
+                                        fileInfo.isDir
+                                    )
                                 )
                             }
 

@@ -97,7 +97,8 @@ class FilePathViewModel @AssistedInject constructor(
 
             is FilePathUiIntent.Browser.OnFileSelect -> onFileSelected(
                 intent.fileName,
-                intent.select
+                intent.select,
+                intent.isDir
             )
         }
     }
@@ -158,9 +159,12 @@ class FilePathViewModel @AssistedInject constructor(
     private fun deleteFile() {
         launchOnIO {
             val fileSize = uiState.value.selectedFileList.size
-            val deleteFile = cache.coreFTPClient.deleteFile(uiState.value.selectedFileList.toList())
+            val deleteFileRes =
+                cache.coreFTPClient.deleteFile(uiState.value.selectedFileList.toList())
+            val deleteDirRes =
+                cache.coreFTPClient.deleteDirectory(uiState.value.selectDirList.toList())
             delay(2000)
-            if (deleteFile) {
+            if (deleteFileRes && deleteDirRes) {
                 setState {
                     copy(
                         selectedFileList = setOf(),
@@ -266,17 +270,18 @@ class FilePathViewModel @AssistedInject constructor(
         }
     }
 
-    private fun onFileSelected(fileName: String, select: Boolean) {
-        println("File Select $fileName  $select")
+    private fun onFileSelected(fileName: String, select: Boolean, isDir: Boolean) {
         setState {
-            copy(
-                selectedFileList = selectedFileList.toMutableSet().apply {
-                    if (select) {
-                        this.add(fileName)
-                    } else {
-                        this.remove(fileName)
-                    }
+            val newSet = (if (isDir) selectDirList else selectedFileList).toMutableSet().apply {
+                if (select) {
+                    this.add(fileName)
+                } else {
+                    this.remove(fileName)
                 }
+            }
+            copy(
+                selectedFileList = if (isDir) selectedFileList else newSet,
+                selectDirList = if (isDir) newSet else selectDirList
             )
         }
     }
@@ -351,7 +356,8 @@ class FilePathViewModel @AssistedInject constructor(
         setState {
             copy(
                 appBarStatus = if (select) FileSelectStatus.Multiple else FileSelectStatus.Single,
-                selectedFileList = mutableSetOf()
+                selectedFileList = mutableSetOf(),
+                selectDirList = mutableSetOf()
             )
         }
     }
