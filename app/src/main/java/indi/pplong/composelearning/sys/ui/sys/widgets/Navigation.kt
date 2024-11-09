@@ -23,7 +23,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import indi.pplong.composelearning.core.file.ui.BrowsePage
-import indi.pplong.composelearning.core.host.ui.HostPage
+import indi.pplong.composelearning.core.host.ui.HostPageRoute
 import indi.pplong.composelearning.core.host.viewmodel.HostsViewModel
 import indi.pplong.composelearning.core.load.ui.TransferScreen
 
@@ -77,8 +77,15 @@ fun CommonNavigationHost(navController: NavHostController, modifier: Modifier) {
         startDestination = BasicBottomNavItem.Hosts.route,
         modifier = modifier
     ) {
+        composable(
+            route = BasicBottomNavItem.Hosts.route
+        ) {
+            HostPageRoute(
+                navController,
+                mainViewModel
+            )
+        }
 
-        composable(BasicBottomNavItem.Hosts.route) { HostPage(navController, mainViewModel) }
         composable(BasicBottomNavItem.Server.route) {
             BrowsePage(
                 navController,

@@ -13,7 +13,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import indi.pplong.composelearning.core.base.state.LoadingState
+import indi.pplong.composelearning.core.host.model.ServerItemInfo
 import indi.pplong.composelearning.core.host.viewmodel.HostsViewModel
+import indi.pplong.composelearning.core.host.viewmodel.ServerUiIntent
+import indi.pplong.composelearning.core.host.viewmodel.ServerUiState
+import indi.pplong.composelearning.sys.ui.theme.ComposeLearningTheme
 
 /**
  * Description:
@@ -21,24 +25,37 @@ import indi.pplong.composelearning.core.host.viewmodel.HostsViewModel
  * @date 9/26/24 8:32 PM
  */
 
-@Preview
 @Composable
-fun HostsList(viewModel: HostsViewModel = hiltViewModel()) {
-    val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+fun HostsList(
+    uiState: ServerUiState,
+    onIntent: (ServerUiIntent) -> Unit,
+) {
     LazyColumn(Modifier.padding(horizontal = 8.dp)) {
-        if (uiState.value.serverList.isEmpty()) {
+        if (uiState.serverList.isEmpty()) {
             item {
                 Text("No Available Host")
             }
         } else {
-            items(uiState.value.serverList) {
+            items(uiState.serverList) {
                 ConnectedHost(
-                    it,
-                    viewModel::sendIntent,
-                    (uiState.value.connectedState == LoadingState.LOADING && it == uiState.value.connectedServer)
+                    serverItemInfo = it,
+                    onIntent = onIntent,
+                    isConnecting =
+                        uiState.connectedState == LoadingState.LOADING && it == uiState.connectedServer
                 )
                 Spacer(Modifier.height(8.dp))
             }
         }
+    }
+}
+
+@Preview
+@Composable
+fun HostsListPreview() {
+    ComposeLearningTheme {
+        HostsList(
+            uiState = ServerUiState(),
+            onIntent = {}
+        )
     }
 }

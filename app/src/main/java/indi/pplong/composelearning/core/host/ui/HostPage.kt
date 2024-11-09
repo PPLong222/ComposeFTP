@@ -28,11 +28,14 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import indi.pplong.composelearning.core.base.state.EditState
 import indi.pplong.composelearning.core.host.viewmodel.EditServerIntent
+import indi.pplong.composelearning.core.host.viewmodel.EditServerUiState
 import indi.pplong.composelearning.core.host.viewmodel.EditServerViewModel
 import indi.pplong.composelearning.core.host.viewmodel.HostsViewModel
 import indi.pplong.composelearning.core.host.viewmodel.ServerUiEffect
 import indi.pplong.composelearning.core.host.viewmodel.ServerUiIntent
+import indi.pplong.composelearning.core.host.viewmodel.ServerUiState
 import indi.pplong.composelearning.sys.ui.sys.widgets.BasicBottomNavItem
+import indi.pplong.composelearning.sys.ui.theme.ComposeLearningTheme
 
 /**
  * Description:
@@ -40,17 +43,17 @@ import indi.pplong.composelearning.sys.ui.sys.widgets.BasicBottomNavItem
  * @date 9/29/24 3:49 PM
  */
 
-@Preview
 @Composable
-fun HostPage(
+fun HostPageRoute(
     navController: NavHostController = rememberNavController(),
-    mainViewModel: HostsViewModel = hiltViewModel()
+    hostViewModel: HostsViewModel = hiltViewModel(),
+    editServerViewModel: EditServerViewModel = hiltViewModel()
 ) {
-    var showBottomSheet by remember { mutableStateOf(false) }
-    val viewModel: EditServerViewModel = hiltViewModel()
-    val editServerUiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val serverUiState by hostViewModel.uiState.collectAsStateWithLifecycle()
+    val editServerUiState by editServerViewModel.uiState.collectAsStateWithLifecycle()
+
     LaunchedEffect(Unit) {
-        mainViewModel.uiEffect.collect { effect ->
+        hostViewModel.uiEffect.collect { effect ->
             when (effect) {
                 is ServerUiEffect.NavigateToFilePage -> {
                     navController.navigate(BasicBottomNavItem.Server.route) {
@@ -65,6 +68,24 @@ fun HostPage(
             }
         }
     }
+
+    HostPage(
+        serverUiState = serverUiState,
+        editServerUiState = editServerUiState,
+        onServerIntent = hostViewModel::sendIntent,
+        onEditServerIntent = editServerViewModel::sendIntent
+    )
+}
+
+@Composable
+fun HostPage(
+    serverUiState: ServerUiState,
+    editServerUiState: EditServerUiState,
+    onServerIntent: (ServerUiIntent) -> Unit,
+    onEditServerIntent: (EditServerIntent) -> Unit
+) {
+    var showBottomSheet by remember { mutableStateOf(false) }
+
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
@@ -79,22 +100,37 @@ fun HostPage(
         Spacer(Modifier.padding(innerPadding))
         Column {
             Text("Hosts", style = MaterialTheme.typography.headlineLarge)
-            HostsList(mainViewModel)
+            HostsList(
+                uiState = serverUiState,
+                onIntent = onServerIntent
+            )
         }
 
         if (showBottomSheet) {
             EditServerBottomSheet(
                 onDismissRequest = {
                     showBottomSheet = false
-                    viewModel.sendIntent(EditServerIntent.OnDismiss(true))
+                    onEditServerIntent(EditServerIntent.OnDismiss(true))
                     if (editServerUiState.editState == EditState.SUCCESS) {
-                        mainViewModel.sendIntent(ServerUiIntent.OnServerEdited)
+                        onServerIntent(ServerUiIntent.OnServerEdited)
                     }
                 },
                 uiState = editServerUiState,
-                onIntent = viewModel::sendIntent
+                onIntent = onEditServerIntent
             )
         }
     }
+}
 
+@Preview
+@Composable
+fun HostPagePreview() {
+    ComposeLearningTheme {
+        HostPage(
+            serverUiState = ServerUiState(),
+            editServerUiState = EditServerUiState(),
+            onServerIntent = {},
+            onEditServerIntent = {}
+        )
+    }
 }

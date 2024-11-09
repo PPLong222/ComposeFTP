@@ -41,6 +41,7 @@ import indi.pplong.composelearning.core.host.model.ConnectivityTestState
 import indi.pplong.composelearning.core.host.viewmodel.EditServerIntent
 import indi.pplong.composelearning.core.host.viewmodel.EditServerUiState
 import indi.pplong.composelearning.core.util.ServerPortInfo
+import indi.pplong.composelearning.sys.ui.theme.ComposeLearningTheme
 
 /**
  * Description:
@@ -84,7 +85,6 @@ fun EditServerBottomSheet(
 }
 
 @Composable
-@Preview
 internal fun EditServerBottomSheetContent(
     uiState: EditServerUiState = EditServerUiState(),
     onIntent: (EditServerIntent) -> Unit = {}
@@ -229,7 +229,6 @@ internal fun EditServerBottomSheetContent(
 }
 
 @Composable
-@Preview
 fun ConfigureHostInfo(
     uiState: EditServerUiState = EditServerUiState(),
     onIntent: (EditServerIntent) -> Unit = {}
@@ -264,5 +263,21 @@ fun ConfigureHostInfo(
         ) {
             Text("Save")
         }
+    }
+}
+
+@Composable
+@Preview(showBackground = true)
+fun ConfigureHostInfoPreview() {
+    ComposeLearningTheme {
+        ConfigureHostInfo()
+    }
+}
+
+@Composable
+@Preview(showBackground = true)
+fun EditServerBottomSheetContentPreview() {
+    ComposeLearningTheme {
+        EditServerBottomSheetContent()
     }
 }

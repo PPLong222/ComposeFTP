@@ -25,6 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import indi.pplong.composelearning.core.host.model.ServerItemInfo
 import indi.pplong.composelearning.core.host.viewmodel.ServerUiIntent
+import indi.pplong.composelearning.sys.ui.theme.ComposeLearningTheme
 
 /**
  * Description:
@@ -38,7 +39,7 @@ data class ConnectedHostBean(
     val lastConnectedTime: String
 )
 
-@Preview
+
 @Composable
 fun ConnectedHost(
     serverItemInfo: ServerItemInfo = ServerItemInfo(),
@@ -91,6 +92,12 @@ fun ConnectedHost(
             ),
         )
     }
+}
 
-
+@Preview
+@Composable
+fun ConnectedHostPreview() {
+    ComposeLearningTheme {
+        ConnectedHost()
+    }
 }
