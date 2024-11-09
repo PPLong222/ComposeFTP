@@ -126,15 +126,12 @@ fun CommonFileItem(
             ListItem(
                 leadingContent = {
                     DirAndFileIcon(
-                        name = fileInfo.name,
-                        isDir = fileInfo.isDir,
-                        key = fileInfo.md5,
-                        url = fileInfo.localUri,
                         cache = {
                             onIntent(
                                 FilePathUiIntent.Browser.CacheItem(fileInfo)
                             )
-                        }
+                        },
+                        fileInfo = fileInfo
                     )
                 },
                 headlineContent = {
@@ -264,17 +261,14 @@ fun CommonFileItem(
 @Composable
 @Preview
 fun DirAndFileIcon(
-    name: String = "1.x",
-    isDir: Boolean = true,
-    url: String = "",
-    key: String = "",
-    cache: () -> Unit = { }
+    cache: () -> Unit = { },
+    fileInfo: FileItemInfo = FileItemInfo()
 ) {
-    val fileType = FileUtil.getFileType(name)
+    val fileType = FileUtil.getFileType(fileInfo.name)
     val context = LocalContext.current
     Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
 
-        if (isDir) {
+        if (fileInfo.isDir) {
             Icon(
                 painter = painterResource(R.drawable.ic_folder),
                 contentDescription = null,
@@ -283,18 +277,28 @@ fun DirAndFileIcon(
         } else {
             when (fileType) {
                 FileType.PNG -> {
-                    FileThumbnailAsyncImage(
-                        key = key,
-                        localUri = url,
-                        cache = cache
-                    )
+                    // File Size > 100MB, show default image icon
+                    if (fileInfo.size > 1024 * 1024 * 100) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_image),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        FileThumbnailAsyncImage(
+                            key = fileInfo.md5,
+                            localUri = fileInfo.localUri,
+                            cache = cache
+                        )
+                    }
+
                 }
 
                 FileType.VIDEO -> {
-                    Log.d("ttt", "DirAndFileIcon: md5 $key")
+                    Log.d("ttt", "DirAndFileIcon: md5 ${fileInfo.md5}")
                     FileThumbnailAsyncImage(
-                        key = key,
-                        localUri = url,
+                        key = fileInfo.md5,
+                        localUri = fileInfo.localUri,
                         cache = cache
                     )
                 }
