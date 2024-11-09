@@ -1,15 +1,16 @@
 package indi.pplong.composelearning.core.host.viewmodel
 
 import dagger.hilt.android.lifecycle.HiltViewModel
+import indi.pplong.composelearning.core.base.GlobalRepository
 import indi.pplong.composelearning.core.base.mvi.BaseViewModel
 import indi.pplong.composelearning.core.base.state.ConfigureState
 import indi.pplong.composelearning.core.base.state.EditState
+import indi.pplong.composelearning.core.cache.thumbnail.ThumbnailCacheDao
 import indi.pplong.composelearning.core.file.model.TransferredFileDao
 import indi.pplong.composelearning.core.host.model.ConnectivityTestState
 import indi.pplong.composelearning.core.host.model.ServerItemInfo
 import indi.pplong.composelearning.core.host.model.toItem
 import indi.pplong.composelearning.core.host.repo.ServerItemRepository
-import indi.pplong.composelearning.ftp.ComposeFTPClientUtils
 import org.apache.commons.net.ftp.FTP
 import javax.inject.Inject
 
@@ -20,8 +21,10 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class EditServerViewModel @Inject constructor(
+    private val globalViewModel: GlobalRepository,
     private val serverItemRepository: ServerItemRepository,
-    private val transferredFileDao: TransferredFileDao
+    private val transferredFileDao: TransferredFileDao,
+    private val thumbnailCacheDao: ThumbnailCacheDao
 ) : BaseViewModel<EditServerUiState, EditServerIntent, EditServerEffect>() {
     override fun initialState(): EditServerUiState {
         return EditServerUiState(
@@ -36,12 +39,13 @@ class EditServerViewModel @Inject constructor(
         launchOnIO {
             setState { copy(state = ConnectivityTestState.TESTING) }
             val isSuccess =
-                ComposeFTPClientUtils.testHostServerConnectivity(
+                globalViewModel.pool.testHostServerConnectivity(
                     uiState.value.host.host,
                     uiState.value.host.password,
                     uiState.value.host.user,
                     uiState.value.host.port,
-                    transferredFileDao
+                    transferredFileDao,
+                    thumbnailCacheDao
                 )
             setState { copy(state = if (isSuccess) ConnectivityTestState.SUCCESS else ConnectivityTestState.FAIL) }
         }

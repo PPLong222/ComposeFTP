@@ -5,7 +5,9 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.webkit.MimeTypeMap
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.core.content.FileProvider
+import indi.pplong.composelearning.core.base.GlobalRepository
 import indi.pplong.composelearning.core.util.FileUtil.getImageThumbnailWithDecoder
 import indi.pplong.composelearning.core.util.FileUtil.getVideoThumbnailWithRetriever
 import java.io.File
@@ -15,6 +17,10 @@ import java.io.File
  * @author PPLong
  * @date 10/26/24 8:26 PM
  */
+
+val LocalGlobalViewModel = staticCompositionLocalOf<GlobalRepository> {
+    error("No GlobalViewModel provided")
+}
 
 fun Uri.isVideoFile(context: Context): Boolean {
     var mimeType = context.contentResolver.getType(this)
@@ -62,7 +68,7 @@ fun Uri.getThumbnail(context: Context): Bitmap? {
         return getImageThumbnailWithDecoder(context.contentResolver, this)
     } else if (isVideoFile(context)) {
         return getVideoThumbnailWithRetriever(
-            context.contentResolver,
+            context,
             this,
             48.dpToPx(context),
             48.dpToPx(context)

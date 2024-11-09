@@ -77,12 +77,15 @@ fun CommonNavigationHost(navController: NavHostController, modifier: Modifier) {
         startDestination = BasicBottomNavItem.Hosts.route,
         modifier = modifier
     ) {
+
         composable(BasicBottomNavItem.Hosts.route) { HostPage(navController, mainViewModel) }
         composable(BasicBottomNavItem.Server.route) {
             BrowsePage(
+                navController,
                 uiState.connectedServer?.host ?: ""
             )
         }
         composable(BasicBottomNavItem.Download.route) { TransferScreen() }
     }
+
 }

@@ -121,7 +121,6 @@ fun FileActionBottomAppBar(
                 delay(900)
                 beginToShake = false
             }
-
         }
     }
     val context = LocalContext.current
@@ -197,7 +196,7 @@ fun FileActionBottomAppBar(
                             onClick = {
                                 VibrationUtil.triggerVibration(context)
                                 beginToShake = true
-//                                onClickFAB(status)
+                                onClickFAB(status)
                             },
                             containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
                             elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation(),

@@ -2,14 +2,14 @@ package indi.pplong.composelearning.core.host.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import indi.pplong.composelearning.core.base.GlobalRepository
 import indi.pplong.composelearning.core.base.mvi.BaseViewModel
 import indi.pplong.composelearning.core.base.state.LoadingState
-import indi.pplong.composelearning.core.cache.FTPServerPool
+import indi.pplong.composelearning.core.cache.thumbnail.ThumbnailCacheDao
 import indi.pplong.composelearning.core.file.model.TransferredFileDao
 import indi.pplong.composelearning.core.host.model.ServerItemInfo
 import indi.pplong.composelearning.core.host.model.toItemInfo
 import indi.pplong.composelearning.core.host.repo.ServerItemRepository
-import indi.pplong.composelearning.ftp.SingleFTPClient
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -20,8 +20,10 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class HostsViewModel @Inject constructor(
+    private val globalViewModel: GlobalRepository,
     private val serverItemRepository: ServerItemRepository,
-    private val transferredFileDao: TransferredFileDao
+    private val transferredFileDao: TransferredFileDao,
+    private val thumbnailCacheDao: ThumbnailCacheDao
 ) : BaseViewModel<ServerUiState, ServerUiIntent, ServerUiEffect>() {
 
     init {
@@ -62,7 +64,7 @@ class HostsViewModel @Inject constructor(
 
     private fun connect(serverItemInfo: ServerItemInfo) {
         setState { copy(connectedState = LoadingState.LOADING, connectedServer = serverItemInfo) }
-        if (FTPServerPool.getCacheByHost(serverItemInfo.host) != null) {
+        if (globalViewModel.pool.getCacheByHost(serverItemInfo.host) != null) {
             setState {
                 copy(
                     connectedState = LoadingState.SUCCESS,
@@ -71,25 +73,30 @@ class HostsViewModel @Inject constructor(
             }
             handleNavigate()
         }
-        if (FTPServerPool.getCacheByHost(serverItemInfo.host) == null) {
+        if (globalViewModel.pool.getCacheByHost(serverItemInfo.host) == null) {
             launchOnIO {
                 serverItemInfo.apply {
-                    val client = SingleFTPClient(host, port, user, password, transferredFileDao)
-                    client.initClient(
-                        onSuccess = {
-                            FTPServerPool.putCacheByHost(host, client)
-                            setState {
-                                copy(
-                                    connectedState = LoadingState.SUCCESS,
-                                    connectedServer = serverItemInfo
-                                )
-                            }
-                            handleNavigate()
-                        },
-                        onFail = {
-                            setState { copy(connectedState = LoadingState.FAIL) }
-                        }
+                    val res = globalViewModel.pool.initNewCache(
+                        host,
+                        port,
+                        user,
+                        password,
+                        transferredFileDao,
+                        thumbnailCacheDao
                     )
+
+                    if (res) {
+                        setState {
+                            copy(
+                                connectedState = LoadingState.SUCCESS,
+                                connectedServer = serverItemInfo
+                            )
+                        }
+                        handleNavigate()
+                    } else {
+                        setState { copy(connectedState = LoadingState.FAIL) }
+
+                    }
                 }
             }
         }

@@ -6,6 +6,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import indi.pplong.composelearning.core.cache.thumbnail.ThumbnailCacheDao
 import indi.pplong.composelearning.core.file.model.TransferredFileDao
 import indi.pplong.composelearning.core.host.repo.OfflineServerItemRepository
 import indi.pplong.composelearning.core.host.repo.ServerItemRepository
@@ -34,4 +35,9 @@ object DataBaseModule {
     @Singleton
     fun provideTransferredFileDao(database: CommonDatabase): TransferredFileDao =
         database.transferredFileDao()
+
+    @Provides
+    @Singleton
+    fun provideThumbnailCacheDao(database: CommonDatabase): ThumbnailCacheDao =
+        database.thumbnailCacheDao()
 }

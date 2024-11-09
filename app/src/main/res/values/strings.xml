@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">ComposeFTP</string>
     <string name="time">"time: "</string>
-    <string name="size">"Size: "</string>
+    <string name="size_with_number">"Size: "</string>
     <string name="test_connectivity">Test Connectivity</string>
     <string name="next">Next</string>
     <string name="test_again">Test Again</string>
@@ -18,4 +18,8 @@
     <string name="nothing_is_here">Nothing is here...</string>
     <string name="cancel">Cancel</string>
     <string name="create">Create</string>
+    <string name="name">Name</string>
+    <string name="date">Date</string>
+    <string name="size">Size</string>
+    <string name="type">Type</string>
 </resources>

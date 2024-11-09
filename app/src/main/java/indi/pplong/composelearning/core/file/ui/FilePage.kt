@@ -48,6 +48,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import indi.pplong.composelearning.R
 import indi.pplong.composelearning.core.base.state.LoadingState
 import indi.pplong.composelearning.core.file.model.FileSelectStatus
@@ -70,6 +72,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrowsePage(
+    navController: NavController = rememberNavController(),
     host: String = "",
 ) {
     val viewModel: FilePathViewModel =
@@ -81,7 +84,6 @@ fun BrowsePage(
     Log.d("FilePage", "FilePage: Init ViewModel")
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf(false) }
-
     val context = LocalContext.current
     val openDirectoryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -254,6 +256,12 @@ fun BrowsePage(
                         )
                     }
                 }
+                FileSortTypeMenu(
+                    uiState.fileSortMode,
+                    onChange = {
+                        viewModel.sendIntent(FilePathUiIntent.Browser.OnFileSortModeChange(it))
+                    }
+                )
             }
             Spacer(Modifier.height(16.dp))
             if (uiState.loadingState == LoadingState.LOADING) {

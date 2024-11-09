@@ -51,7 +51,6 @@ fun TransferScreen() {
         }
     }
 
-
 }
 
 @Composable

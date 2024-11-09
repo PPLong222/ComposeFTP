@@ -16,6 +16,7 @@ import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
+import indi.pplong.composelearning.core.base.FileType
 import java.text.DecimalFormat
 import java.time.Instant
 import java.time.ZoneId
@@ -78,24 +79,30 @@ object FileUtil {
         return fileName
     }
 
-    fun getMimeType(fileName: String, default: Boolean = true): String {
+    fun getMimeType(fileName: String): String {
         val extension = fileName.substringAfterLast('.', "").lowercase()
         return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
             ?: "application/octet-stream"
     }
 
     fun getVideoThumbnailWithRetriever(
-        contentResolver: ContentResolver,
+        context: Context,
         videoUri: Uri,
         width: Int,
         height: Int,
     ): Bitmap? {
         return try {
             val retriever = MediaMetadataRetriever()
-            contentResolver.openFileDescriptor(videoUri, "r")?.use {
+
+            context.contentResolver.openFileDescriptor(videoUri, "r")?.use {
                 retriever.setDataSource(it.fileDescriptor)
                 retriever.frameAtTime?.let { bitmap ->
-                    Bitmap.createScaledBitmap(bitmap, width, height, true)
+                    Bitmap.createScaledBitmap(
+                        bitmap,
+                        width.dpToPx(context),
+                        height.dpToPx(context),
+                        true
+                    )
                 }
             }
         } catch (e: Exception) {
@@ -149,6 +156,13 @@ object FileUtil {
         )
         return uri
     }
+
+    fun getFileType(fileName: String): FileType {
+        val mimeType = getMimeType(fileName)
+        if (mimeType.startsWith("video/")) return FileType.VIDEO
+        if (mimeType.startsWith("image/")) return FileType.PNG
+        return FileType.OTHER
+    }
 }
 
 object ServerPortInfo {
@@ -167,7 +181,7 @@ object VibrationUtil {
         }
         vibrator?.vibrate(
             VibrationEffect.createWaveform(
-                longArrayOf(0, 100, 200, 100),
+                longArrayOf(0, 100),
                 VibrationEffect.DEFAULT_AMPLITUDE
             )
         )

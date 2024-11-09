@@ -2,8 +2,8 @@ package indi.pplong.composelearning.core.load.viewmodel
 
 import android.util.Log
 import dagger.hilt.android.lifecycle.HiltViewModel
+import indi.pplong.composelearning.core.base.GlobalRepository
 import indi.pplong.composelearning.core.base.mvi.BaseViewModel
-import indi.pplong.composelearning.core.cache.FTPServerPool
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.TransferredFileDao
 import kotlinx.coroutines.launch
@@ -16,6 +16,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class TransferViewModel @Inject constructor(
+    private val globalViewModel: GlobalRepository,
     private val fileDao: TransferredFileDao
 ) : BaseViewModel<TransferUiState, TransferUiIntent, TransferUiEffect>() {
 
@@ -24,7 +25,7 @@ class TransferViewModel @Inject constructor(
     init {
         //
         launchOnIO {
-            FTPServerPool.downloadFTPList.collect {
+            globalViewModel.pool.downloadFTPList.collect {
                 it.forEach { client ->
                     launch {
                         client.transferFileFlow.collect { file ->
@@ -54,7 +55,7 @@ class TransferViewModel @Inject constructor(
             }
         }
         launchOnIO {
-            FTPServerPool.uploadFTPList.collect {
+            globalViewModel.pool.uploadFTPList.collect {
                 it.forEach { client ->
                     launch {
                         client.uploadFileFlow.collect { file ->

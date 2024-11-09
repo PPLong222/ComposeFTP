@@ -1,10 +1,13 @@
 package indi.pplong.composelearning
 
+import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import indi.pplong.composelearning.core.util.FileUtil
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
+
 
 /**
  * Instrumented test, which will execute on an Android device.
@@ -22,5 +25,12 @@ class ExampleInstrumentedTest {
         val b = "123"
 
         println(a === b)
+    }
+
+    @Test
+    fun getRemoteVideoThumbnail() {
+        val mimeType = FileUtil.getMimeType("123.png")
+        Log.d("testtest", "getRemoteVideoThumbnail: $mimeType")
+        Log.d("testtest", "getRemoteVideoThumbnail: ${FileUtil.getMimeType("123.mp4")}")
     }
 }

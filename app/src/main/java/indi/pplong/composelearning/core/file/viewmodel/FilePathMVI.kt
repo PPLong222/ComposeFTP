@@ -8,9 +8,10 @@ import indi.pplong.composelearning.core.base.state.LoadingState
 import indi.pplong.composelearning.core.base.state.RequestingState
 import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.model.FileSelectStatus
+import indi.pplong.composelearning.core.file.ui.FileSortType
+import indi.pplong.composelearning.core.file.ui.FileSortTypeMode
 import indi.pplong.composelearning.core.load.model.TransferringFile
 import java.io.InputStream
-import java.io.OutputStream
 
 /**
  * Description:
@@ -23,35 +24,34 @@ data class FilePathUiState(
     val loadingState: LoadingState = LoadingState.LOADING,
     val actionLoadingState: RequestingState = RequestingState.DONE,
     val appBarStatus: FileSelectStatus = FileSelectStatus.Single,
-    val selectedFileList: Set<String> = mutableSetOf(),
-    val selectDirList: Set<String> = mutableSetOf(),
-    val createDirDialog: CreateDirDialog = CreateDirDialog()
+    val selectedFileList: Set<FileItemInfo> = mutableSetOf(),
+    val createDirDialog: CreateDirDialog = CreateDirDialog(),
+    val fileSortMode: FileSortTypeMode = FileSortTypeMode(fileSortType = FileSortType.Name, true)
 ) : UiState
 
 sealed class FilePathUiIntent : UiIntent {
     sealed class Browser : FilePathUiIntent() {
         data class MoveForward(val path: String) : Browser()
         data class Download(
-            val outputStream: OutputStream,
             val fileItemInfo: FileItemInfo,
             val localUri: String
         ) :
             Browser()
 
-        data class OnFileSelect(val fileName: String, val select: Boolean, val isDir: Boolean) :
+        data class OnFileSelect(val fileInfo: FileItemInfo, val select: Boolean) :
             Browser()
+
+        data class CacheItem(val fileItemInfo: FileItemInfo) : Browser()
+
+        data class OnFileSortModeChange(val fileSortMode: FileSortTypeMode) : Browser()
     }
 
     sealed class AppBar : FilePathUiIntent() {
-        data class OpenDeleteFileDialog(val fileName: Set<String>) : AppBar()
+        data object OpenDeleteFileDialog : AppBar()
         data object OpenFileSelectWindow : AppBar()
         data object Refresh : AppBar()
         data class SelectFileMode(val select: Boolean) : AppBar()
-        data class DownloadMultipleFiles(
-            val outputStreamList: List<OutputStream>,
-            val localUriList: List<String>
-        ) :
-            AppBar()
+        data object OnDownloadButtonClick : AppBar()
 
         data class Upload(val transferringFile: TransferringFile, val inputStream: InputStream) :
             AppBar()
@@ -79,7 +79,7 @@ sealed class FilePathUiIntent : UiIntent {
 }
 
 sealed class FilePathUiEffect : UiEffect {
-    data class ShowDeleteDialog(val fileName: Set<String>) : FilePathUiEffect()
+    data object ShowDeleteDialog : FilePathUiEffect()
     data object DismissDeleteDialog : FilePathUiEffect()
     data object OnDeleteFile : FilePathUiEffect()
     data object ShowFileSelectWindow : FilePathUiEffect()

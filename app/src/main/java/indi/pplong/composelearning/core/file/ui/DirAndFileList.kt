@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -45,16 +46,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import indi.pplong.composelearning.R
+import indi.pplong.composelearning.core.base.FileType
 import indi.pplong.composelearning.core.base.ui.PopupSimpleItem
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.FileItemInfo
@@ -87,9 +92,7 @@ fun DirAndFileList(
                 onIntent = onIntent,
                 uiState.fileList.last() == item,
                 isOnSelectMode = uiState.appBarStatus == FileSelectStatus.Multiple,
-                isSelect = (item.isDir.not() && uiState.selectedFileList.contains(item.name)) || (item.isDir && uiState.selectDirList.contains(
-                    item.name
-                ))
+                isSelect = (uiState.selectedFileList.contains(item))
 
             )
         }
@@ -121,6 +124,19 @@ fun CommonFileItem(
             Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
         ) {
             ListItem(
+                leadingContent = {
+                    DirAndFileIcon(
+                        name = fileInfo.name,
+                        isDir = fileInfo.isDir,
+                        key = fileInfo.md5,
+                        url = fileInfo.localUri,
+                        cache = {
+                            onIntent(
+                                FilePathUiIntent.Browser.CacheItem(fileInfo)
+                            )
+                        }
+                    )
+                },
                 headlineContent = {
                     Text(
                         fileInfo.name,
@@ -184,9 +200,8 @@ fun CommonFileItem(
                             } else {
                                 onIntent(
                                     FilePathUiIntent.Browser.OnFileSelect(
-                                        fileInfo.name,
-                                        !isSelect,
-                                        fileInfo.isDir
+                                        fileInfo,
+                                        !isSelect
                                     )
                                 )
                             }
@@ -247,6 +262,70 @@ fun CommonFileItem(
 }
 
 @Composable
+@Preview
+fun DirAndFileIcon(
+    name: String = "1.x",
+    isDir: Boolean = true,
+    url: String = "",
+    key: String = "",
+    cache: () -> Unit = { }
+) {
+    val fileType = FileUtil.getFileType(name)
+    val context = LocalContext.current
+    Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+
+        if (isDir) {
+            Icon(
+                painter = painterResource(R.drawable.ic_folder),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            when (fileType) {
+                FileType.PNG -> {
+                    FileThumbnailAsyncImage(
+                        key = key,
+                        localUri = url,
+                        cache = cache
+                    )
+                }
+
+                FileType.VIDEO -> {
+                    Log.d("ttt", "DirAndFileIcon: md5 $key")
+                    FileThumbnailAsyncImage(
+                        key = key,
+                        localUri = url,
+                        cache = cache
+                    )
+                }
+
+                FileType.MUSIC -> {}
+                FileType.OTHER -> {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_description),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+            // Video
+//            Image(
+//                bitmap = FileUtil.getVideoThumbnailWithRetriever(
+//                    contentResolver = context.contentResolver,
+//                    videoUri = Uri.parse("content://media/external/downloads/1000018392"),
+//                    width = 48,
+//                    height = 48
+//                )!!.asImageBitmap(),
+//                contentDescription = null,
+//                modifier = Modifier
+//                    .fillMaxSize()
+//                    .clip(RoundedCornerShape(8.dp))
+//            )
+        }
+    }
+}
+
+@Composable
 fun FileTailIconItem(
     fileInfo: FileItemInfo,
     onIntent: (FilePathUiIntent) -> Unit,
@@ -270,15 +349,12 @@ fun FileTailIconItem(
                         // TODO: Differentiate by Android Version
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                             FileUtil.getFileUriInDownloadDir(context, fileInfo.name)?.let { uri ->
-                                context.contentResolver.openOutputStream(uri)?.let { stream ->
-                                    onIntent(
-                                        FilePathUiIntent.Browser.Download(
-                                            stream,
-                                            fileInfo,
-                                            uri.toString()
-                                        )
+                                onIntent(
+                                    FilePathUiIntent.Browser.Download(
+                                        fileInfo,
+                                        uri.toString()
                                     )
-                                }
+                                )
                             }
 
 
@@ -332,5 +408,7 @@ fun FileTailIconItem(
 
 
 }
+
+
 
 

@@ -18,15 +18,19 @@ data class FileItemInfo(
     val size: Long = 0,
     val timeStampZoneId: ZoneId = ZoneId.systemDefault(),
     val transferStatus: TransferStatus = TransferStatus.Initial,
-    val localUri: String = ""
+    val localUri: String = "",
+    val md5: String = ""
 )
 
-fun FTPFile.toFileItemInfo(prefix: String): FileItemInfo = FileItemInfo(
-    name,
-    isDirectory,
-    if (prefix == "/") "" else prefix,
-    user,
-    timestamp.time.time,
-    size,
-    timestamp.timeZone.toZoneId()
-)
+fun FTPFile.toFileItemInfo(prefix: String, md5: String, localUri: String): FileItemInfo =
+    FileItemInfo(
+        name,
+        isDirectory,
+        if (prefix == "/") "" else prefix,
+        user,
+        timestamp.time.time,
+        size,
+        timestamp.timeZone.toZoneId(),
+        md5 = md5,
+        localUri = localUri
+    )

@@ -24,12 +24,9 @@ import coil.compose.AsyncImage
 import coil.imageLoader
 import coil.request.ImageRequest
 import indi.pplong.composelearning.core.util.dpToPx
-import indi.pplong.composelearning.core.util.getThumbnail
 import indi.pplong.composelearning.core.util.isImageFile
 import indi.pplong.composelearning.core.util.isMediaWithThumbnail
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Description:
@@ -49,18 +46,17 @@ fun LocalFileAsyncImage(
     if (uri.isMediaWithThumbnail(context)) {
         LaunchedEffect(uri) {
             scope.launch {
-                if (uri.isImageFile(context)) {
-                    bitmap = null
-                    isLoading = false
-                } else {
-                    withContext(Dispatchers.IO) {
-                        val thumbBitmap = uri.getThumbnail(context)
-                        withContext(Dispatchers.Main) {
-                            bitmap = thumbBitmap
-                            isLoading = true
-                        }
-                    }
-                }
+//                if (uri.isImageFile(context)) {
+//                    bitmap = null.  2
+//                    isLoading = false
+//                } else {
+//                    withContext(Dispatchers.IO) {text)
+//                        withContext(Dispatchers.Main) {
+//                            bitmap = thumbBitmap
+//                            isLoading = true
+//                        }
+//                    }
+//                }
             }
         }
 
