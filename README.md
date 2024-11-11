@@ -35,3 +35,10 @@ You can be a :
 - [ ] Code design optimization, clean up.
 - [ ] Material theme adaptation.
 - [ ] SFTP Support
+
+## TODO List
+
+1. **Normal**: Drag File to move to previous dir.
+2. **Major**: Disconnection detection and notification.
+3. **Major**: Transfer Page.(UI and Client Logic)
+4. **Major**: Error handle logic.
