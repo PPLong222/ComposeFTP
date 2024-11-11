@@ -16,9 +16,14 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -37,8 +42,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,6 +57,7 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -121,16 +125,18 @@ fun DirAndFileList(
             delay(2) // 添加延迟以模拟帧速率，确保滚动平滑
         }
     }
+
     LazyColumn(
         modifier = Modifier
             .nestedScroll(scrollBehavior.nestedScrollConnection)
+            .fillMaxSize()
             .onGloballyPositioned {
                 positionY = it.positionInRoot().y.toInt()
                 positionHeightY = it.positionInRoot().y.toInt() + it.size.height
             },
         state = state
     ) {
-        items(uiState.fileList) { item ->
+        items(uiState.fileList, key = { it.md5 }) { item ->
             CommonFileItem(
                 fileInfo = item,
                 onIntent = onIntent,
@@ -168,8 +174,9 @@ fun CommonFileItem(
         animationSpec = tween(durationMillis = 250)
     )
     var shouldHighLight by remember { mutableStateOf(false) }
-    Box(
+    Column(
         Modifier
+            .background(color = MaterialTheme.colorScheme.surfaceContainer)
             .dragAndDropTarget(
                 shouldStartDragAndDrop = { event ->
                     event
@@ -261,112 +268,105 @@ fun CommonFileItem(
                 )
             }
     ) {
-        Column(
-            Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
-        ) {
-            ListItem(
-                leadingContent = {
-                    DirAndFileIcon(
-                        cache = {
-                            onIntent(
-                                FilePathUiIntent.Browser.CacheItem(fileInfo)
-                            )
-                        },
-                        fileInfo = fileInfo
-                    )
-                },
-                headlineContent = {
+        CommonListItem(
+            leadingContent = {
+                DirAndFileIcon(
+                    cache = {
+                        onIntent(
+                            FilePathUiIntent.Browser.CacheItem(fileInfo)
+                        )
+                    },
+                    fileInfo = fileInfo
+                )
+            },
+            headlineContent = {
+                Text(
+                    fileInfo.name,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.widthIn(max = 240.dp),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            },
+            supportingContent = {
+                Row {
                     Text(
-                        fileInfo.name,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.widthIn(max = 240.dp),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        DateUtil.getFormatDate(
+                            fileInfo.timeStamp,
+                            fileInfo.timeStampZoneId
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
-                },
-                supportingContent = {
-                    Row {
+                    if (!fileInfo.isDir) {
                         Text(
-                            DateUtil.getFormatDate(
-                                fileInfo.timeStamp,
-                                fileInfo.timeStampZoneId
-                            ),
+                            FileUtil.getFileSize(fileInfo.size),
+                            modifier = Modifier.padding(start = 4.dp),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                        if (!fileInfo.isDir) {
-                            Text(
-                                FileUtil.getFileSize(fileInfo.size),
-                                modifier = Modifier.padding(start = 4.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
                     }
-
-                },
-                trailingContent = {
-                    FileTailIconItem(
-                        fileInfo,
-                        onIntent,
-                        isOnSelectMode = isOnSelectMode,
-                        isSelect = isSelect
-                    )
-                },
-                colors = ListItemDefaults.colors(
-                    containerColor = if (!shouldHighLight) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerHigh
-                ),
-
-                modifier = Modifier
-
-            )
-            if (!isLast) {
-                HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
-            }
-        }
-        if (isPopVisible || alpha > 0F) {
-            Popup(
-                properties = PopupProperties(
-                    focusable = true,
-                    dismissOnClickOutside = true
-                ),
-                onDismissRequest = {
-                    isFadeIn = false
-                },
-                offset = IntOffset(100, 100)
-            ) {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ),
-                    modifier = Modifier
-                        .widthIn(max = 160.dp)
-                        .graphicsLayer(alpha = alpha),
-
-                    ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        PopupSimpleItem(
-                            text = "Delete",
-                            imageVector = Icons.Default.Delete,
-                            onclick = {
-                                isPopVisible = false
-                                isFadeIn = false
-                            })
-                        PopupSimpleItem(text = "Rename", imageVector = Icons.Default.Edit)
-                        PopupSimpleItem(
-                            text = "Move",
-                            imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight
-                        )
-                    }
-
                 }
 
-                LaunchedEffect(alpha) {
-                    if (alpha == 0f) {
-                        isPopVisible = false
-                    }
+            },
+            trailingContent = {
+                FileTailIconItem(
+                    fileInfo,
+                    onIntent,
+                    isOnSelectMode = isOnSelectMode,
+                    isSelect = isSelect
+                )
+            },
+            backgroundColor = if (!shouldHighLight) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+
+
+        if (!isLast) {
+            HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
+        }
+    }
+    if (isPopVisible || alpha > 0F) {
+        Popup(
+            properties = PopupProperties(
+                focusable = true,
+                dismissOnClickOutside = true
+            ),
+            onDismissRequest = {
+                isFadeIn = false
+            },
+            offset = IntOffset(100, 100)
+        ) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                ),
+                modifier = Modifier
+                    .widthIn(max = 160.dp)
+                    .graphicsLayer(alpha = alpha),
+
+                ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    PopupSimpleItem(
+                        text = "Delete",
+                        imageVector = Icons.Default.Delete,
+                        onclick = {
+                            isPopVisible = false
+                            isFadeIn = false
+                        })
+                    PopupSimpleItem(text = "Rename", imageVector = Icons.Default.Edit)
+                    PopupSimpleItem(
+                        text = "Move",
+                        imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight
+                    )
+                }
+
+            }
+
+            LaunchedEffect(alpha) {
+                if (alpha == 0f) {
+                    isPopVisible = false
                 }
             }
         }
@@ -380,8 +380,7 @@ fun DirAndFileIcon(
     fileInfo: FileItemInfo = FileItemInfo()
 ) {
     val fileType = FileUtil.getFileType(fileInfo.name)
-    val context = LocalContext.current
-    Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
 
         if (fileInfo.isDir) {
             Icon(
@@ -524,6 +523,48 @@ fun FileTailIconItem(
     }
 
 
+}
+
+@Composable
+fun CommonListItem(
+    leadingContent: @Composable() (() -> Unit)? = null,
+    trailingContent: @Composable() (() -> Unit)? = null,
+    headlineContent: @Composable () -> Unit,
+    supportingContent: @Composable() (() -> Unit)? = null,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+) {
+    // TODO: Standardized
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 80.dp)
+            .padding(vertical = 8.dp, horizontal = 8.dp)
+            .background(backgroundColor),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        leadingContent?.invoke() ?: Box(modifier = Modifier)
+        Spacer(Modifier.width(12.dp))
+        Column(
+            modifier = Modifier.weight(1F)
+        ) {
+            headlineContent.invoke()
+            Spacer(Modifier.height(4.dp))
+            supportingContent?.invoke()
+        }
+        Spacer(Modifier.width(4.dp))
+        trailingContent?.invoke()
+
+    }
+}
+
+@Composable
+@Preview
+fun PreviewCommonListItem(modifier: Modifier = Modifier) {
+    ComposeLearningTheme {
+        CommonListItem(
+            headlineContent = {}
+        )
+    }
 }
 
 @Composable
