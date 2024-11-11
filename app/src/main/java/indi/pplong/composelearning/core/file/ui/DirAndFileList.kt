@@ -312,7 +312,7 @@ fun CommonFileItem(
                     isSelect = isSelect
                 )
             },
-            backgroundColor = if (!shouldHighLight) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerHigh
+            backgroundColor = if (!shouldHighLight) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceVariant
         )
 
 
