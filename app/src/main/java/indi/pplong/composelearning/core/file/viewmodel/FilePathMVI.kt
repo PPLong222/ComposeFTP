@@ -44,6 +44,8 @@ sealed class FilePathUiIntent : UiIntent {
         data class CacheItem(val fileItemInfo: FileItemInfo) : Browser()
 
         data class OnFileSortModeChange(val fileSortMode: FileSortTypeMode) : Browser()
+
+        data class MoveFile(val originPath: String, val targetPath: String) : Browser()
     }
 
     sealed class AppBar : FilePathUiIntent() {

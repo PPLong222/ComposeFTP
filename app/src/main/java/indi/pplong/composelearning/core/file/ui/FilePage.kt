@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.rememberNavController
 import indi.pplong.composelearning.R
 import indi.pplong.composelearning.core.base.state.LoadingState
@@ -60,6 +61,7 @@ import indi.pplong.composelearning.core.file.viewmodel.FilePathViewModel
 import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.core.util.PermissionUtils
+import indi.pplong.composelearning.sys.ui.sys.widgets.BasicBottomNavItem
 import indi.pplong.composelearning.sys.ui.sys.widgets.CommonTopBar
 import kotlinx.coroutines.launch
 
@@ -195,6 +197,16 @@ fun BrowsePage(
                             uiState.appBarStatus == FileSelectStatus.Single
                         )
                     )
+                },
+                onTransferClick = {
+                    navController.navigate(BasicBottomNavItem.Download.route) {
+                        // Why doing this?
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             )
         },
@@ -263,7 +275,6 @@ fun BrowsePage(
                     }
                 )
             }
-            Spacer(Modifier.height(16.dp))
             if (uiState.loadingState == LoadingState.LOADING) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {

@@ -1,6 +1,7 @@
 package indi.pplong.composelearning.ftp.clients
 
 import android.content.Context
+import android.util.Log
 import indi.pplong.composelearning.ftp.BaseFTPClient
 
 /**
@@ -15,6 +16,8 @@ class CoreFTPClient(
     password: String,
     context: Context
 ) : BaseFTPClient(host, port, username, password, context) {
+
+    private val TAG = javaClass.name
 
     fun createDirectory(dirName: String): Boolean {
         return try {
@@ -47,6 +50,11 @@ class CoreFTPClient(
         }
     }
 
+    fun moveFile(originalPath: String, targetPath: String): Boolean {
+        Log.d(TAG, "moveFile: originPath: $originalPath -- targetPath:  $targetPath ")
+        val res = ftpClient.rename(originalPath, targetPath)
+        return res
+    }
 
     fun createThumbnailClient(): ThumbnailFTPClient {
         return ThumbnailFTPClient(host, port, username, password, context)

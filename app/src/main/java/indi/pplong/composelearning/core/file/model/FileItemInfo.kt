@@ -19,7 +19,8 @@ data class FileItemInfo(
     val timeStampZoneId: ZoneId = ZoneId.systemDefault(),
     val transferStatus: TransferStatus = TransferStatus.Initial,
     val localUri: String = "",
-    val md5: String = ""
+    val md5: String = "",
+    val fullPath: String = "$pathPrefix/$name"
 )
 
 fun FTPFile.toFileItemInfo(prefix: String, md5: String, localUri: String): FileItemInfo =

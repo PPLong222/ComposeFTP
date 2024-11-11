@@ -123,6 +123,10 @@ class FilePathViewModel @AssistedInject constructor(
             is FilePathUiIntent.Browser.OnFileSortModeChange -> {
                 onFileTypeModeChanged(intent.fileSortMode)
             }
+
+            is FilePathUiIntent.Browser.MoveFile -> {
+                moveFile(intent.originPath, intent.targetPath)
+            }
         }
     }
 
@@ -391,6 +395,21 @@ class FilePathViewModel @AssistedInject constructor(
         return finalList
     }
 
+    private fun moveFile(originPath: String, targetPath: String) {
+
+        launchOnIO {
+            val res = runCatching { cache.coreFTPClient.moveFile(originPath, targetPath) }
+            res.fold(
+                onSuccess = {
+
+                },
+                onFailure = {
+
+                }
+            )
+        }
+
+    }
 
     @AssistedFactory
     interface FilePathViewModelFactory {

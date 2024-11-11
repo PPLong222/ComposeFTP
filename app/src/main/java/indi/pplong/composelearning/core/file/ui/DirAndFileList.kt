@@ -1,34 +1,36 @@
 package indi.pplong.composelearning.core.file.ui
 
+import android.content.ClipData
+import android.content.ClipDescription
 import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.draganddrop.dragAndDropSource
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.BottomAppBarScrollBehavior
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -42,12 +44,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
+import androidx.compose.ui.draganddrop.mimeTypes
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -68,6 +77,8 @@ import indi.pplong.composelearning.core.file.viewmodel.FilePathUiIntent
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiState
 import indi.pplong.composelearning.core.util.DateUtil
 import indi.pplong.composelearning.core.util.FileUtil
+import indi.pplong.composelearning.sys.ui.theme.ComposeLearningTheme
+import kotlinx.coroutines.launch
 
 /**
  * Description:
@@ -83,8 +94,24 @@ fun DirAndFileList(
     onIntent: (FilePathUiIntent) -> Unit,
     scrollBehavior: BottomAppBarScrollBehavior
 ) {
+    val state = rememberLazyListState()
+    val firstVisibleItemIndex by remember {
+        derivedStateOf {
+            // 获取当前可见的元素列表，并找到其中最后一个元素的索引
+            state.layoutInfo.visibleItemsInfo.first().index
+        }
+    }
+    val lastVisibleItemIndex by remember {
+        derivedStateOf {
+            // 获取当前可见的元素列表，并找到其中最后一个元素的索引
+            state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+        }
+    }
+
+    val scope = rememberCoroutineScope()
     LazyColumn(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        state = state
     ) {
         items(uiState.fileList) { item ->
             CommonFileItem(
@@ -92,8 +119,18 @@ fun DirAndFileList(
                 onIntent = onIntent,
                 uiState.fileList.last() == item,
                 isOnSelectMode = uiState.appBarStatus == FileSelectStatus.Multiple,
-                isSelect = (uiState.selectedFileList.contains(item))
+                isSelect = (uiState.selectedFileList.contains(item)),
+                scrollBlock = {
+                    scope.launch {
+                        if (firstVisibleItemIndex == uiState.fileList.indexOf(item)) {
+                            state.scrollBy(-40F)
+                        }
+                        if (lastVisibleItemIndex == uiState.fileList.indexOf(item)) {
+                            state.scrollBy(40F)
+                        }
+                    }
 
+                }
             )
         }
 
@@ -102,7 +139,6 @@ fun DirAndFileList(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-@Preview
 fun CommonFileItem(
     fileInfo: FileItemInfo = FileItemInfo(
         transferStatus = TransferStatus.Loading
@@ -111,6 +147,7 @@ fun CommonFileItem(
     isLast: Boolean = false,
     isOnSelectMode: Boolean = false,
     isSelect: Boolean = false,
+    scrollBlock: () -> Unit = {}
 ) {
 
     var isPopVisible by remember { mutableStateOf(false) }
@@ -119,7 +156,100 @@ fun CommonFileItem(
         targetValue = if (isFadeIn) 1f else 0f,
         animationSpec = tween(durationMillis = 250)
     )
-    Box {
+    var shouldHighLight by remember { mutableStateOf(false) }
+    var offsetX by remember { mutableStateOf(0F) }
+    var offsetY by remember { mutableStateOf(0.dp) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val scope = rememberCoroutineScope()
+    Box(
+        Modifier
+            .dragAndDropTarget(
+                shouldStartDragAndDrop = { event ->
+                    event
+                        .mimeTypes()
+                        .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
+                },
+                target = remember {
+                    object : DragAndDropTarget {
+                        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+                        override fun onDrop(event: DragAndDropEvent): Boolean {
+                            val text =
+                                event.toAndroidDragEvent().clipData?.getItemAt(0)?.text
+                                    ?: return true
+                            Log.d(
+                                "intent",
+                                "onDrop: $text"
+                            )
+                            if (fileInfo.fullPath != text && fileInfo.isDir) {
+                                val targetPath = fileInfo.fullPath + "/" + text
+                                    .split("/")
+                                    .last()
+                                onIntent(
+                                    FilePathUiIntent.Browser.MoveFile(
+                                        text.toString(),
+                                        targetPath
+                                    )
+                                )
+                            }
+                            return true
+                        }
+
+                        override fun onEnded(event: DragAndDropEvent) {
+                            super.onEnded(event)
+                            shouldHighLight = false
+                        }
+
+                        override fun onEntered(event: DragAndDropEvent) {
+                            super.onEntered(event)
+                            val filePath = event.toAndroidDragEvent().clipData?.getItemAt(0)?.text
+                            if (fileInfo.fullPath != filePath && fileInfo.isDir) {
+                                shouldHighLight = true
+                            }
+
+                            scrollBlock()
+                        }
+
+                        override fun onExited(event: DragAndDropEvent) {
+                            super.onExited(event)
+                            shouldHighLight = false
+                        }
+                    }
+                }
+            )
+            .dragAndDropSource {
+                detectTapGestures(
+                    onLongPress = {
+                        startTransfer(
+                            transferData = DragAndDropTransferData(
+                                clipData = ClipData.newPlainText(
+                                    "DragData", fileInfo.fullPath
+                                )
+                            )
+                        )
+                    },
+                    onTap = {
+                        if (!isOnSelectMode) {
+                            if (fileInfo.isDir) {
+                                onIntent(
+                                    FilePathUiIntent.Browser.MoveForward(
+                                        fileInfo.pathPrefix
+                                            .plus("/")
+                                            .plus(fileInfo.name)
+                                    )
+                                )
+                            }
+                        } else {
+                            onIntent(
+                                FilePathUiIntent.Browser.OnFileSelect(
+                                    fileInfo,
+                                    !isSelect
+                                )
+                            )
+                        }
+                    }
+                )
+            }
+    ) {
         Column(
             Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
         ) {
@@ -174,37 +304,11 @@ fun CommonFileItem(
                     )
                 },
                 colors = ListItemDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    containerColor = if (!shouldHighLight) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerHigh
                 ),
 
                 modifier = Modifier
-                    .combinedClickable(
-                        onLongClick = {
-                            isPopVisible = true
-                            isFadeIn = true
-                        },
-                        onClick = {
-                            if (!isOnSelectMode) {
-                                if (fileInfo.isDir) {
-                                    onIntent(
-                                        FilePathUiIntent.Browser.MoveForward(
-                                            fileInfo.pathPrefix
-                                                .plus("/")
-                                                .plus(fileInfo.name)
-                                        )
-                                    )
-                                }
-                            } else {
-                                onIntent(
-                                    FilePathUiIntent.Browser.OnFileSelect(
-                                        fileInfo,
-                                        !isSelect
-                                    )
-                                )
-                            }
 
-                        }
-                    )
             )
             if (!isLast) {
                 HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
@@ -348,38 +452,38 @@ fun FileTailIconItem(
         Log.d("test", "FileTailIconItem: ${fileInfo.transferStatus}")
         when (fileInfo.transferStatus) {
             TransferStatus.Failed, TransferStatus.Initial -> {
-                Button(
-                    onClick = {
-                        // TODO: Differentiate by Android Version
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            FileUtil.getFileUriInDownloadDir(context, fileInfo.name)?.let { uri ->
-                                onIntent(
-                                    FilePathUiIntent.Browser.Download(
-                                        fileInfo,
-                                        uri.toString()
-                                    )
-                                )
-                            }
-
-
-                        } else {
-                            // TODO
-                        }
-                    },
-                    modifier = Modifier
-                        .width(32.dp)
-                        .height(32.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(4.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(
-                        Icons.Default.KeyboardArrowDown,
-                        null
-                    )
-                }
+//                Button(
+//                    onClick = {
+//                        // TODO: Differentiate by Android Version
+//                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//                            FileUtil.getFileUriInDownloadDir(context, fileInfo.name)?.let { uri ->
+//                                onIntent(
+//                                    FilePathUiIntent.Browser.Download(
+//                                        fileInfo,
+//                                        uri.toString()
+//                                    )
+//                                )
+//                            }
+//
+//
+//                        } else {
+//                            // TODO
+//                        }
+//                    },
+//                    modifier = Modifier
+//                        .width(32.dp)
+//                        .height(32.dp),
+//                    shape = RoundedCornerShape(8.dp),
+//                    contentPadding = PaddingValues(4.dp),
+//                    colors = ButtonDefaults.buttonColors(
+//                        containerColor = MaterialTheme.colorScheme.primary
+//                    )
+//                ) {
+//                    Icon(
+//                        Icons.Default.KeyboardArrowDown,
+//                        null
+//                    )
+//                }
             }
 
             TransferStatus.Successful -> {
@@ -413,6 +517,10 @@ fun FileTailIconItem(
 
 }
 
-
-
-
+@Composable
+@Preview
+fun PreviewCommonFileItem(modifier: Modifier = Modifier) {
+    ComposeLearningTheme {
+        CommonFileItem()
+    }
+}
