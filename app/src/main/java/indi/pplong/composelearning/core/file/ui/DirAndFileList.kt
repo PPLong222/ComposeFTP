@@ -419,19 +419,6 @@ fun DirAndFileIcon(
                     )
                 }
             }
-            // Video
-//            Image(
-//                bitmap = FileUtil.getVideoThumbnailWithRetriever(
-//                    contentResolver = context.contentResolver,
-//                    videoUri = Uri.parse("content://media/external/downloads/1000018392"),
-//                    width = 48,
-//                    height = 48
-//                )!!.asImageBitmap(),
-//                contentDescription = null,
-//                modifier = Modifier
-//                    .fillMaxSize()
-//                    .clip(RoundedCornerShape(8.dp))
-//            )
         }
     }
 }
@@ -521,10 +508,10 @@ fun FileTailIconItem(
 
 @Composable
 fun CommonListItem(
-    leadingContent: @Composable() (() -> Unit)? = null,
-    trailingContent: @Composable() (() -> Unit)? = null,
+    leadingContent: @Composable (() -> Unit)? = null,
+    trailingContent: @Composable (() -> Unit)? = null,
     headlineContent: @Composable () -> Unit,
-    supportingContent: @Composable() (() -> Unit)? = null,
+    supportingContent: @Composable (() -> Unit)? = null,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
 ) {
     // TODO: Standardized
@@ -532,8 +519,8 @@ fun CommonListItem(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = 80.dp)
-            .padding(vertical = 8.dp, horizontal = 8.dp)
-            .background(backgroundColor),
+            .background(backgroundColor)
+            .padding(vertical = 8.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         leadingContent?.invoke() ?: Box(modifier = Modifier)
