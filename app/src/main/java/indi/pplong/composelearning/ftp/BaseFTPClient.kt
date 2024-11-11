@@ -29,6 +29,8 @@ open class BaseFTPClient(
 
     fun initClient(): Boolean {
         var res = false
+        // Enable UTF-8 to avoid coding mess
+        ftpClient.autodetectUTF8 = true
         if (port == null) {
             ftpClient.connect(InetAddress.getByName(host))
         } else {
