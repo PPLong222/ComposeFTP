@@ -13,7 +13,6 @@ import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,11 +43,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +56,8 @@ import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -78,7 +77,8 @@ import indi.pplong.composelearning.core.file.viewmodel.FilePathUiState
 import indi.pplong.composelearning.core.util.DateUtil
 import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.sys.ui.theme.ComposeLearningTheme
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlin.math.abs
 
 /**
  * Description:
@@ -95,22 +95,39 @@ fun DirAndFileList(
     scrollBehavior: BottomAppBarScrollBehavior
 ) {
     val state = rememberLazyListState()
-    val firstVisibleItemIndex by remember {
-        derivedStateOf {
-            // 获取当前可见的元素列表，并找到其中最后一个元素的索引
-            state.layoutInfo.visibleItemsInfo.first().index
+
+    var positionY by remember { mutableStateOf(0) }
+    var positionHeightY by remember { mutableStateOf(0) }
+    var currentScrollPos by remember { mutableStateOf(0) }
+    var moveState by remember { mutableStateOf(0) }
+    LaunchedEffect(currentScrollPos) {
+        if (currentScrollPos == 0 || positionY == 0) {
+            return@LaunchedEffect
         }
-    }
-    val lastVisibleItemIndex by remember {
-        derivedStateOf {
-            // 获取当前可见的元素列表，并找到其中最后一个元素的索引
-            state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+        Log.d("ttt", "DirAndFileList: $currentScrollPos $positionY $positionHeightY $moveState")
+        if (abs(currentScrollPos - positionY) < 100 && moveState != -1) {
+            moveState = -1
+
+        }
+        if (abs(positionHeightY - currentScrollPos) < 100 && moveState != 1) {
+            moveState = 1
         }
     }
 
-    val scope = rememberCoroutineScope()
+    LaunchedEffect(moveState) {
+        while ((moveState == -1) || (moveState == 1)) {
+            Log.d("ttt", "scrollToIndexWithConstantSpeed: Running")
+            state.scrollBy((if (moveState == -1) -1F else 1F) * 8F) // 按指定速度滚动
+            delay(2) // 添加延迟以模拟帧速率，确保滚动平滑
+        }
+    }
     LazyColumn(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier
+            .nestedScroll(scrollBehavior.nestedScrollConnection)
+            .onGloballyPositioned {
+                positionY = it.positionInRoot().y.toInt()
+                positionHeightY = it.positionInRoot().y.toInt() + it.size.height
+            },
         state = state
     ) {
         items(uiState.fileList) { item ->
@@ -121,14 +138,8 @@ fun DirAndFileList(
                 isOnSelectMode = uiState.appBarStatus == FileSelectStatus.Multiple,
                 isSelect = (uiState.selectedFileList.contains(item)),
                 scrollBlock = {
-                    scope.launch {
-                        if (firstVisibleItemIndex == uiState.fileList.indexOf(item)) {
-                            state.scrollBy(-40F)
-                        }
-                        if (lastVisibleItemIndex == uiState.fileList.indexOf(item)) {
-                            state.scrollBy(40F)
-                        }
-                    }
+                    // TODO: Consider UiEffect?
+                    currentScrollPos = it
 
                 }
             )
@@ -147,7 +158,7 @@ fun CommonFileItem(
     isLast: Boolean = false,
     isOnSelectMode: Boolean = false,
     isSelect: Boolean = false,
-    scrollBlock: () -> Unit = {}
+    scrollBlock: (Int) -> Unit = {}
 ) {
 
     var isPopVisible by remember { mutableStateOf(false) }
@@ -157,10 +168,6 @@ fun CommonFileItem(
         animationSpec = tween(durationMillis = 250)
     )
     var shouldHighLight by remember { mutableStateOf(false) }
-    var offsetX by remember { mutableStateOf(0F) }
-    var offsetY by remember { mutableStateOf(0.dp) }
-    val interactionSource = remember { MutableInteractionSource() }
-    val scope = rememberCoroutineScope()
     Box(
         Modifier
             .dragAndDropTarget(
@@ -199,14 +206,18 @@ fun CommonFileItem(
                             shouldHighLight = false
                         }
 
+                        override fun onMoved(event: DragAndDropEvent) {
+                            super.onMoved(event)
+
+                            scrollBlock(event.toAndroidDragEvent().y.toInt())
+                        }
+
                         override fun onEntered(event: DragAndDropEvent) {
                             super.onEntered(event)
                             val filePath = event.toAndroidDragEvent().clipData?.getItemAt(0)?.text
                             if (fileInfo.fullPath != filePath && fileInfo.isDir) {
                                 shouldHighLight = true
                             }
-
-                            scrollBlock()
                         }
 
                         override fun onExited(event: DragAndDropEvent) {
@@ -399,7 +410,6 @@ fun DirAndFileIcon(
                 }
 
                 FileType.VIDEO -> {
-                    Log.d("ttt", "DirAndFileIcon: md5 ${fileInfo.md5}")
                     FileThumbnailAsyncImage(
                         key = fileInfo.md5,
                         localUri = fileInfo.localUri,
@@ -449,7 +459,6 @@ fun FileTailIconItem(
             onCheckedChange = null
         )
     } else {
-        Log.d("test", "FileTailIconItem: ${fileInfo.transferStatus}")
         when (fileInfo.transferStatus) {
             TransferStatus.Failed, TransferStatus.Initial -> {
 //                Button(
