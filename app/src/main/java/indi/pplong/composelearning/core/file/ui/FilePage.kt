@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -185,8 +184,6 @@ fun BrowsePage(
             }
         }
     }
-    val scrollState = BottomAppBarDefaults.exitAlwaysScrollBehavior()
-
     Scaffold(
         topBar = {
             CommonTopBar(
@@ -215,7 +212,6 @@ fun BrowsePage(
                 barStatus = uiState.appBarStatus,
                 onClickFAB = viewModel::bottomAppBarFABActionEvents,
                 events = viewModel::bottomAppBarActionEvents,
-                scrollBehavior = scrollState
             )
         },
         snackbarHost = {
@@ -288,7 +284,7 @@ fun BrowsePage(
                 }
             } else {
                 // Body
-                DirAndFileList(uiState, viewModel::sendIntent, scrollState)
+                DirAndFileList(uiState, viewModel::sendIntent)
             }
 
         }

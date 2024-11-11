@@ -34,12 +34,10 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -59,7 +57,6 @@ import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
@@ -91,12 +88,10 @@ import kotlin.math.abs
  */
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DirAndFileList(
     uiState: FilePathUiState,
-    onIntent: (FilePathUiIntent) -> Unit,
-    scrollBehavior: BottomAppBarScrollBehavior
+    onIntent: (FilePathUiIntent) -> Unit
 ) {
     val state = rememberLazyListState()
 
@@ -128,7 +123,6 @@ fun DirAndFileList(
 
     LazyColumn(
         modifier = Modifier
-            .nestedScroll(scrollBehavior.nestedScrollConnection)
             .fillMaxSize()
             .onGloballyPositioned {
                 positionY = it.positionInRoot().y.toInt()

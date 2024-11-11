@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.BottomAppBarDefaults
-import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -90,7 +89,6 @@ fun FileActionBottomAppBar(
     modifier: Modifier = Modifier,
     onClickFAB: (FileSelectStatus) -> Unit = {},
     events: (FileBottomAppBarAction) -> Unit = {},
-    scrollBehavior: BottomAppBarScrollBehavior? = null
 ) {
     val map = mapOf(
         FileBottomAppBarAction.REFRESH to rememberVectorPainter(Icons.Default.Refresh),
@@ -227,7 +225,6 @@ fun FileActionBottomAppBar(
                 }
             }
 
-        },
-        scrollBehavior = scrollBehavior
+        }
     )
 }
