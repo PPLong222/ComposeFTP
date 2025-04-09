@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.rememberNavController
 import indi.pplong.composelearning.R
 import indi.pplong.composelearning.core.base.state.LoadingState
@@ -58,9 +57,9 @@ import indi.pplong.composelearning.core.file.viewmodel.FilePathUiEffect
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiIntent
 import indi.pplong.composelearning.core.file.viewmodel.FilePathViewModel
 import indi.pplong.composelearning.core.load.model.TransferringFile
+import indi.pplong.composelearning.core.load.ui.TransferBottomSheet
 import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.core.util.PermissionUtils
-import indi.pplong.composelearning.sys.ui.sys.widgets.BasicBottomNavItem
 import indi.pplong.composelearning.sys.ui.sys.widgets.CommonTopBar
 import kotlinx.coroutines.launch
 
@@ -139,6 +138,19 @@ fun BrowsePage(
     }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    if (uiState.showTransferSheet) {
+        TransferBottomSheet(
+            onDismissRequest = {
+                viewModel.sendIntent(
+                    FilePathUiIntent.AppBar.SetTransferSheetShow(
+                        false
+                    )
+                )
+            }
+        )
+    }
+
     LaunchedEffect(viewModel.uiEffect) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
@@ -188,6 +200,7 @@ fun BrowsePage(
         topBar = {
             CommonTopBar(
                 hasSelect = uiState.appBarStatus == FileSelectStatus.Multiple,
+                host = host,
                 onClickSelect = {
                     viewModel.sendIntent(
                         FilePathUiIntent.AppBar.SelectFileMode(
@@ -196,14 +209,7 @@ fun BrowsePage(
                     )
                 },
                 onTransferClick = {
-                    navController.navigate(BasicBottomNavItem.Download.route) {
-                        // Why doing this?
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    viewModel.sendIntent(FilePathUiIntent.AppBar.SetTransferSheetShow(true))
                 }
             )
         },

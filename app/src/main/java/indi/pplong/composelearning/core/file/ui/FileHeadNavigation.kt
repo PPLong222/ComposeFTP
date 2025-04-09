@@ -6,12 +6,11 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -26,9 +25,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import indi.pplong.composelearning.R
 import kotlinx.coroutines.launch
 
 /**
@@ -59,11 +60,13 @@ fun HeadPathNavigation(
     ) {
         item {
             Icon(
-                imageVector = Icons.Default.Home,
+                painter = painterResource(R.drawable.path),
                 contentDescription = null,
-                modifier = Modifier.clickable {
-                    onPathClick("/")
-                },
+                modifier = Modifier
+                    .size(20.dp)
+                    .clickable {
+                        onPathClick("/")
+                    },
                 tint = MaterialTheme.colorScheme.secondary
             )
         }
@@ -100,7 +103,7 @@ fun SinglePathText(
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         modifier = Modifier
             .padding(vertical = 4.dp)
-            .padding(start = 4.dp)
+            .padding(start = 0.dp)
             .clip(RoundedCornerShape(size = 8.dp))
             .clickable(
                 interactionSource = source,

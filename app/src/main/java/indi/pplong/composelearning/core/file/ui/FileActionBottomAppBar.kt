@@ -174,7 +174,8 @@ fun FileActionBottomAppBar(
         },
         floatingActionButton = {
             // TODO: Optimization
-            AnimatedContent(barStatus,
+            AnimatedContent(
+                barStatus,
                 transitionSpec = {
                     (fadeIn(animationSpec = tween(200, delayMillis = 150)) +
                             scaleIn(
@@ -196,13 +197,12 @@ fun FileActionBottomAppBar(
                                 beginToShake = true
                                 onClickFAB(status)
                             },
-                            containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
                             elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation(),
                             modifier = Modifier.rotate(rotationAngle)
                         ) {
                             Icon(
                                 painter =
-                                painterResource(R.drawable.ic_arrow_upward),
+                                    painterResource(R.drawable.ic_arrow_upward),
                                 contentDescription = null
                             )
                         }
@@ -217,7 +217,7 @@ fun FileActionBottomAppBar(
                         ) {
                             Icon(
                                 painter =
-                                painterResource(R.drawable.ic_download),
+                                    painterResource(R.drawable.ic_download),
                                 contentDescription = null
                             )
                         }

@@ -11,7 +11,7 @@ import java.time.ZoneId
  */
 data class FileItemInfo(
     val name: String = "aaasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasd",
-    val isDir: Boolean = false,
+    val isDir: Boolean = true,
     val pathPrefix: String = "",
     val user: String = "",
     val timeStamp: Long = 0,

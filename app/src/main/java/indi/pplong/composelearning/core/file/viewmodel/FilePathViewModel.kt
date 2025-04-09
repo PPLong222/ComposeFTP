@@ -112,8 +112,7 @@ class FilePathViewModel @AssistedInject constructor(
             }
 
             is FilePathUiIntent.Browser.OnFileSelect -> onFileSelected(
-                intent.fileInfo,
-                intent.select
+                intent.fileInfo
             )
 
             is FilePathUiIntent.Browser.CacheItem -> {
@@ -158,6 +157,10 @@ class FilePathViewModel @AssistedInject constructor(
             FilePathUiIntent.AppBar.Refresh -> refresh()
             FilePathUiIntent.AppBar.ClickCreateDirIcon -> {
                 setState { copy(createDirDialog = createDirDialog.copy(isShow = true)) }
+            }
+
+            is FilePathUiIntent.AppBar.SetTransferSheetShow -> {
+                setState { copy(showTransferSheet = intent.isShow) }
             }
         }
     }
@@ -325,10 +328,11 @@ class FilePathViewModel @AssistedInject constructor(
         }
     }
 
-    private fun onFileSelected(fileInfo: FileItemInfo, select: Boolean) {
+    private fun onFileSelected(fileInfo: FileItemInfo) {
         setState {
+            val ifContains = selectedFileList.contains(fileInfo)
             val newSet = selectedFileList.toMutableSet().apply {
-                if (select) add(fileInfo) else remove(fileInfo)
+                if (ifContains) remove(fileInfo) else add(fileInfo)
             }
             copy(selectedFileList = newSet)
         }
@@ -339,17 +343,17 @@ class FilePathViewModel @AssistedInject constructor(
             copy(appBarStatus = FileSelectStatus.Single)
         }
         launchOnIO {
+            var tempFileList = uiState.value.fileList.toMutableList()
             uiState.value.selectedFileList.forEach {
                 val newFileInfo =
                     it.copy(transferStatus = TransferStatus.Loading)
-                setState {
-                    copy(fileList = fileList.toMutableStateList().apply {
-                        set(indexOf(it), newFileInfo)
-                    })
-                }
-                launchOnIO {
+                tempFileList[tempFileList.indexOf(it)] = newFileInfo
+                launch {
                     cache.downloadFile(newFileInfo)
                 }
+            }
+            setState {
+                copy(fileList = tempFileList)
             }
         }
     }

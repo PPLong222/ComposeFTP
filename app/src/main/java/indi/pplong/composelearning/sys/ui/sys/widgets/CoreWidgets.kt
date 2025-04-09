@@ -14,6 +14,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -54,6 +55,7 @@ internal class CommonTopBarConfigProvider : PreviewParameterProvider<CommonTopBa
 @Preview
 fun CommonTopBar(
     @PreviewParameter(CommonTopBarConfigProvider::class) config: CommonTopBarConfig = CommonTopBarConfigProvider().values.first(),
+    host: String = "192.168.1.1",
     hasSelect: Boolean = false,
     onClickSelect: () -> Unit = {},
     onTransferClick: () -> Unit = {},
@@ -61,7 +63,7 @@ fun CommonTopBar(
     TopAppBar(
         title = {
             Text(
-                text = "",
+                text = host,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -82,11 +84,12 @@ fun CommonTopBar(
             )
             Spacer(Modifier.width(12.dp))
             AnimatedContent(targetState = hasSelect) { state ->
-                Box(modifier = Modifier
-                    .padding(end = 16.dp)
-                    .clickable {
-                        onClickSelect()
-                    }) {
+                Box(
+                    modifier = Modifier
+                        .padding(end = 16.dp)
+                        .clickable {
+                            onClickSelect()
+                        }) {
                     if (state) {
                         Text("Done", style = MaterialTheme.typography.labelLarge)
                     } else {
@@ -95,6 +98,9 @@ fun CommonTopBar(
                 }
             }
         },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        )
 
         )
 }

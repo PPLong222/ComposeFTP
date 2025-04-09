@@ -80,9 +80,7 @@ class HostsViewModel @Inject constructor(
                         host,
                         port,
                         user,
-                        password,
-                        transferredFileDao,
-                        thumbnailCacheDao
+                        password
                     )
 
                     if (res) {

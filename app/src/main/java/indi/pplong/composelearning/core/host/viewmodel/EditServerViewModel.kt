@@ -5,8 +5,6 @@ import indi.pplong.composelearning.core.base.GlobalRepository
 import indi.pplong.composelearning.core.base.mvi.BaseViewModel
 import indi.pplong.composelearning.core.base.state.ConfigureState
 import indi.pplong.composelearning.core.base.state.EditState
-import indi.pplong.composelearning.core.cache.thumbnail.ThumbnailCacheDao
-import indi.pplong.composelearning.core.file.model.TransferredFileDao
 import indi.pplong.composelearning.core.host.model.ConnectivityTestState
 import indi.pplong.composelearning.core.host.model.ServerItemInfo
 import indi.pplong.composelearning.core.host.model.toItem
@@ -22,9 +20,7 @@ import javax.inject.Inject
 @HiltViewModel
 class EditServerViewModel @Inject constructor(
     private val globalViewModel: GlobalRepository,
-    private val serverItemRepository: ServerItemRepository,
-    private val transferredFileDao: TransferredFileDao,
-    private val thumbnailCacheDao: ThumbnailCacheDao
+    private val serverItemRepository: ServerItemRepository
 ) : BaseViewModel<EditServerUiState, EditServerIntent, EditServerEffect>() {
     override fun initialState(): EditServerUiState {
         return EditServerUiState(
@@ -43,9 +39,7 @@ class EditServerViewModel @Inject constructor(
                     uiState.value.host.host,
                     uiState.value.host.password,
                     uiState.value.host.user,
-                    uiState.value.host.port,
-                    transferredFileDao,
-                    thumbnailCacheDao
+                    uiState.value.host.port
                 )
             setState { copy(state = if (isSuccess) ConnectivityTestState.SUCCESS else ConnectivityTestState.FAIL) }
         }

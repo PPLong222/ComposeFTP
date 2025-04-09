@@ -26,7 +26,8 @@ data class FilePathUiState(
     val appBarStatus: FileSelectStatus = FileSelectStatus.Single,
     val selectedFileList: Set<FileItemInfo> = mutableSetOf(),
     val createDirDialog: CreateDirDialog = CreateDirDialog(),
-    val fileSortMode: FileSortTypeMode = FileSortTypeMode(fileSortType = FileSortType.Name, true)
+    val fileSortMode: FileSortTypeMode = FileSortTypeMode(fileSortType = FileSortType.Name, true),
+    val showTransferSheet: Boolean = false
 ) : UiState
 
 sealed class FilePathUiIntent : UiIntent {
@@ -38,7 +39,7 @@ sealed class FilePathUiIntent : UiIntent {
         ) :
             Browser()
 
-        data class OnFileSelect(val fileInfo: FileItemInfo, val select: Boolean) :
+        data class OnFileSelect(val fileInfo: FileItemInfo) :
             Browser()
 
         data class CacheItem(val fileItemInfo: FileItemInfo) : Browser()
@@ -59,6 +60,8 @@ sealed class FilePathUiIntent : UiIntent {
             AppBar()
 
         data object ClickCreateDirIcon : AppBar()
+
+        data class SetTransferSheetShow(val isShow: Boolean) : AppBar()
 
     }
 

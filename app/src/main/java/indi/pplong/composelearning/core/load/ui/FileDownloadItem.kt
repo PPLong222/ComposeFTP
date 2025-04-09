@@ -54,20 +54,32 @@ fun FileDownloadItem(
     ) {
         Icon(Icons.Default.Info, null)
         Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier) {
+        Column(modifier = Modifier.padding(end = 16.dp)) {
             Text(fileItemInfo.name, style = MaterialTheme.typography.titleSmall)
             if (fileItemInfo.transferStatus is TransferStatus.Transferring) {
-                Text(
-                    "Download Speed ${FileUtil.getFileSize(fileItemInfo.transferStatus.speed)} /s",
-                    style = MaterialTheme.typography.labelSmall
-                )
+                Row {
+                    Text(
+                        "${FileUtil.getFileSize(fileItemInfo.transferStatus.speed)} /s",
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        "${FileUtil.getFileSize((fileItemInfo.transferStatus.value * fileItemInfo.size).toLong())} / ${
+                            FileUtil.getFileSize(
+                                fileItemInfo.size
+                            )
+                        }",
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+
                 LinearProgressIndicator(
                     progress = {
                         fileItemInfo.transferStatus.value
                     },
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
-                        .padding(top = 4.dp, end = 16.dp)
+                        .padding(top = 4.dp)
                         .fillMaxWidth(),
                 )
             }

@@ -25,7 +25,7 @@ class TransferViewModel @Inject constructor(
     init {
         //
         launchOnIO {
-            globalViewModel.pool.downloadFTPList.collect {
+            globalViewModel.pool.downloadFTPSet.collect {
                 it.forEach { client ->
                     launch {
                         client.transferFileFlow.collect { file ->
@@ -55,7 +55,7 @@ class TransferViewModel @Inject constructor(
             }
         }
         launchOnIO {
-            globalViewModel.pool.uploadFTPList.collect {
+            globalViewModel.pool.uploadFTPSet.collect {
                 it.forEach { client ->
                     launch {
                         client.uploadFileFlow.collect { file ->

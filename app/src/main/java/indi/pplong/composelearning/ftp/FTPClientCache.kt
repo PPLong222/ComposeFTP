@@ -2,11 +2,15 @@ package indi.pplong.composelearning.ftp
 
 import android.net.Uri
 import android.util.Log
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.ftp.clients.CoreFTPClient
 import indi.pplong.composelearning.ftp.clients.TransferFTPClient
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import org.apache.commons.net.ftp.FTPFile
 import java.io.InputStream
 import java.util.Queue
@@ -17,13 +21,14 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * @author PPLong
  * @date 9/30/24 12:24 PM
  */
-class FTPClientCache(
-    val coreFTPClient: CoreFTPClient,
-    val maxSize: Int = MAX_CLIENTS_SIZE,
-    val maxAvailableSize: Int = MAX_AVAILABLE_CLIENTS_SIZE,
-    val longestActiveRemain: Long = LONGEST_ACTIVE_TIME
-) {
+class FTPClientCache @AssistedInject constructor(
+    @Assisted val coreFTPClient: CoreFTPClient,
+    private val transferFactory: TransferFTPClient.Factory
+) : PoolContext {
     companion object {
+        //        val maxSize: Int = MAX_CLIENTS_SIZE,
+//        val maxAvailableSize: Int = MAX_AVAILABLE_CLIENTS_SIZE,
+//        val longestActiveRemain: Long = LONGEST_ACTIVE_TIME,
         private const val MAX_CLIENTS_SIZE = 10
         private const val MAX_AVAILABLE_CLIENTS_SIZE = 2
         private const val LONGEST_ACTIVE_TIME = 10 * 1000L
@@ -49,17 +54,19 @@ class FTPClientCache(
     val hasDownloadNode = downloadQueue.value.isNotEmpty()
     fun getCurrentPath() = coreFTPClient.getCurrentPath()
 
-    init {
-
-
-    }
-
     fun getAvailableTransferFTPClient(): TransferFTPClient? {
         if (!idledClientsQueue.isEmpty()) {
             return idledClientsQueue.poll()
         }
         if (totalClientSize < MAX_CLIENTS_SIZE) {
-            val client = coreFTPClient.createTransferClient()
+            val client = transferFactory.create(
+                coreFTPClient.host,
+                coreFTPClient.port,
+                coreFTPClient.username,
+                coreFTPClient.password,
+                context,
+                this
+            )
             if (client.initClient()) {
                 return client
             }
@@ -89,18 +96,6 @@ class FTPClientCache(
         }
     }
 
-    fun idleClientFromDownload(singleFTPClient: TransferFTPClient) {
-        val newSet = downloadQueue.value.toMutableSet()
-        newSet.remove(singleFTPClient)
-        downloadQueue.value = newSet
-    }
-
-    fun idleClientFromUpload(singleFTPClient: TransferFTPClient) {
-        val newSet = uploadQueue.value.toMutableSet()
-        newSet.remove(singleFTPClient)
-        uploadQueue.value = newSet
-    }
-
     suspend fun uploadFile(transferringFile: TransferringFile, inputStream: InputStream) {
         getAvailableTransferFTPClient()?.let { client ->
             client.changePath(transferringFile.transferredFileItem.remotePathPrefix)
@@ -124,5 +119,36 @@ class FTPClientCache(
 
     suspend fun launchThumbnailJob(fileName: String, key: String): Uri? {
         return thumbnailFTPClient.launchThumbnailWork(fileName, key)
+    }
+
+    override fun addToDownloadList(singleFTPClient: TransferFTPClient) {
+        downloadQueue.update { set ->
+            set.toMutableSet().apply { add(singleFTPClient) }
+        }
+    }
+
+    override fun idleFromDownloadList(singleFTPClient: TransferFTPClient) {
+        downloadQueue.update { set ->
+            set.toMutableSet().apply { remove(singleFTPClient) }
+        }
+        idledClientsQueue.add(singleFTPClient)
+    }
+
+    override fun addToUploadList(singleFTPClient: TransferFTPClient) {
+        uploadQueue.update { set ->
+            set.toMutableSet().apply { add(singleFTPClient) }
+        }
+    }
+
+    override fun idleFromUploadList(singleFTPClient: TransferFTPClient) {
+        uploadQueue.update { set ->
+            set.toMutableSet().apply { remove(singleFTPClient) }
+        }
+        idledClientsQueue.add(singleFTPClient)
+    }
+
+    @AssistedFactory
+    interface Factory {
+        fun create(coreFTPClient: CoreFTPClient): FTPClientCache
     }
 }

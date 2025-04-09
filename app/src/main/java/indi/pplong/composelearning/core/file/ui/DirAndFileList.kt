@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -59,7 +60,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -130,13 +130,14 @@ fun DirAndFileList(
             },
         state = state
     ) {
-        items(uiState.fileList, key = { it.md5 }) { item ->
+
+        items(uiState.fileList) { item ->
             CommonFileItem(
                 fileInfo = item,
                 onIntent = onIntent,
-                uiState.fileList.last() == item,
+                isLast = uiState.fileList.last() == item,
                 isOnSelectMode = uiState.appBarStatus == FileSelectStatus.Multiple,
-                isSelect = (uiState.selectedFileList.contains(item)),
+                isSelect = uiState.selectedFileList.contains(item),
                 scrollBlock = {
                     // TODO: Consider UiEffect?
                     currentScrollPos = it
@@ -160,7 +161,6 @@ fun CommonFileItem(
     isSelect: Boolean = false,
     scrollBlock: (Int) -> Unit = {}
 ) {
-
     var isPopVisible by remember { mutableStateOf(false) }
     var isFadeIn by remember { mutableStateOf(false) }
     val alpha by animateFloatAsState(
@@ -170,7 +170,7 @@ fun CommonFileItem(
     var shouldHighLight by remember { mutableStateOf(false) }
     Column(
         Modifier
-            .background(color = MaterialTheme.colorScheme.surfaceContainer)
+            .background(color = MaterialTheme.colorScheme.surface)
             .dragAndDropTarget(
                 shouldStartDragAndDrop = { event ->
                     event
@@ -253,8 +253,7 @@ fun CommonFileItem(
                         } else {
                             onIntent(
                                 FilePathUiIntent.Browser.OnFileSelect(
-                                    fileInfo,
-                                    !isSelect
+                                    fileInfo
                                 )
                             )
                         }
@@ -312,12 +311,14 @@ fun CommonFileItem(
                     isSelect = isSelect
                 )
             },
-            backgroundColor = if (!shouldHighLight) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceVariant
+            backgroundColor = MaterialTheme.colorScheme.surface
         )
 
 
         if (!isLast) {
-            HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
         }
     }
     if (isPopVisible || alpha > 0F) {
@@ -374,7 +375,7 @@ fun DirAndFileIcon(
     fileInfo: FileItemInfo = FileItemInfo()
 ) {
     val fileType = FileUtil.getFileType(fileInfo.name)
-    Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
 
         if (fileInfo.isDir) {
             Icon(
@@ -431,7 +432,15 @@ fun FileTailIconItem(
     isSelect: Boolean = true,
 
     ) {
-    val context = LocalContext.current
+    if (fileInfo.isDir) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+            tint = MaterialTheme.colorScheme.onSurface,
+            contentDescription = null,
+            modifier = Modifier.padding(end = 6.dp)
+        )
+        return
+    }
 
     if (isOnSelectMode) {
         Checkbox(
@@ -512,7 +521,7 @@ fun CommonListItem(
     trailingContent: @Composable (() -> Unit)? = null,
     headlineContent: @Composable () -> Unit,
     supportingContent: @Composable (() -> Unit)? = null,
-    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
 ) {
     // TODO: Standardized
     Row(
