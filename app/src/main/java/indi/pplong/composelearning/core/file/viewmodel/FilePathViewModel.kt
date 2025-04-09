@@ -482,6 +482,14 @@ class FilePathViewModel @AssistedInject constructor(
             copy(
                 appBarStatus = if (select) FileSelectStatus.Multiple else FileSelectStatus.Single,
                 selectedFileList = mutableSetOf(),
+                fileList = fileList.map {
+                    // fix bug when selecting not effect
+                    if (it.transferStatus == TransferStatus.Successful || it.transferStatus == TransferStatus.Failed) {
+                        it.copy(transferStatus = TransferStatus.Initial)
+                    } else {
+                        it
+                    }
+                }
             )
         }
     }

@@ -132,6 +132,12 @@ fun DirAndFileList(
     ) {
 
         items(uiState.fileList) { item ->
+            Log.d(
+                "Compose",
+                "Recomposing DirAndFileList: selectedFileList = ${
+                    item
+                }, ${uiState.selectedFileList.firstOrNull()}, ${item == uiState.selectedFileList.firstOrNull()}"
+            )
             CommonFileItem(
                 fileInfo = item,
                 onIntent = onIntent,
@@ -168,6 +174,7 @@ fun CommonFileItem(
         animationSpec = tween(durationMillis = 250)
     )
     var shouldHighLight by remember { mutableStateOf(false) }
+
     Column(
         Modifier
             .background(color = MaterialTheme.colorScheme.surface)
