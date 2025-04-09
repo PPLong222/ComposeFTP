@@ -63,4 +63,11 @@ open class BaseFTPClient(
         return ftpClient.listFiles()
     }
 
+    fun isConnectionAlive(): Boolean {
+        return try {
+            ftpClient.sendNoOp()
+        } catch (e: Exception) {
+            false
+        }
+    }
 }

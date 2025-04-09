@@ -53,6 +53,7 @@ class TransferFTPClient @AssistedInject constructor(
         lastRecordTime = System.currentTimeMillis()
         var tempBytes = 0
         _uploadFileFlow.value = transferringFile.copy()
+        cacheContext.addToUploadList(this@TransferFTPClient)
         ftpClient.copyStreamListener = object : CopyStreamAdapter() {
             override fun bytesTransferred(
                 totalBytesTransferred: Long,
@@ -72,7 +73,6 @@ class TransferFTPClient @AssistedInject constructor(
                             tempBytes * 1000L / (System.currentTimeMillis() - lastRecordTime)
                         )
                     )
-                    cacheContext.addToUploadList(this@TransferFTPClient)
                     lastRecordTime = System.currentTimeMillis()
                     tempBytes = 0
                 }
@@ -110,6 +110,7 @@ class TransferFTPClient @AssistedInject constructor(
         var tempBytes = 0
 
         val uri = FileUtil.getFileUriInDownloadDir(context, fileItemInfo.name)
+        cacheContext.addToDownloadList(this@TransferFTPClient)
         ftpClient.copyStreamListener = object : CopyStreamAdapter() {
             override fun bytesTransferred(
                 totalBytesTransferred: Long,
@@ -129,7 +130,7 @@ class TransferFTPClient @AssistedInject constructor(
                             tempBytes * 1000L / (System.currentTimeMillis() - lastRecordTime)
                         )
                     )
-                    cacheContext.addToDownloadList(this@TransferFTPClient)
+
                     lastRecordTime = System.currentTimeMillis()
                     tempBytes = 0
                 }
