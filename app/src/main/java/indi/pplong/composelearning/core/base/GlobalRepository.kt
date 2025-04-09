@@ -1,7 +1,5 @@
 package indi.pplong.composelearning.core.base
 
-import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
 import indi.pplong.composelearning.ftp.FTPServerPool
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,12 +11,6 @@ import javax.inject.Singleton
  */
 @Singleton
 class GlobalRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+    val pool: FTPServerPool
 ) {
-
-    val pool = FTPServerPool(context)
-    var x = 1
-    fun addX() {
-        x++
-    }
 }

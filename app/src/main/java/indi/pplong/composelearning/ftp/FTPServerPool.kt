@@ -1,28 +1,47 @@
 package indi.pplong.composelearning.ftp
 
 import android.content.Context
-import indi.pplong.composelearning.core.cache.thumbnail.ThumbnailCacheDao
-import indi.pplong.composelearning.core.file.model.TransferredFileDao
+import dagger.hilt.android.qualifiers.ApplicationContext
 import indi.pplong.composelearning.ftp.clients.CoreFTPClient
-import indi.pplong.composelearning.ftp.clients.TransferFTPClient
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Description:
  * @author PPLong
  * @date 9/30/24 12:52 PM
  */
-class FTPServerPool(val context: Context) {
+@Singleton
+class FTPServerPool @Inject constructor(
+    @ApplicationContext val context: Context,
+    private val ftpClientCacheFactory: FTPClientCache.Factory
+) {
     private val _serverFTPMap = MutableStateFlow<Map<String, FTPClientCache>>(mapOf())
     val serverFTPMap = _serverFTPMap
 
-    private val _downloadFTPSet = MutableStateFlow<MutableSet<TransferFTPClient>>(mutableSetOf())
-    val downloadFTPList = _downloadFTPSet.asStateFlow()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val downloadFTPSet = _serverFTPMap.map { map ->
+        map.values.map { it.downloadQueue }
+    }.flatMapLatest {
+        combine(it) { sets ->
+            sets.flatMap { it }.toSet()
+        }
+    }
 
-    private val _uploadFTPSet = MutableStateFlow<MutableSet<TransferFTPClient>>(mutableSetOf())
-    val uploadFTPList = _uploadFTPSet.asStateFlow()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val uploadFTPSet = _serverFTPMap.map { map ->
+        map.values.map { it.uploadQueue }
+    }.flatMapLatest {
+        combine(it) { sets ->
+            sets.flatMap { it }.toSet()
+        }
+    }
 
     fun getAllCache(): List<FTPClientCache> {
         return _serverFTPMap.value.values.toList()
@@ -33,10 +52,9 @@ class FTPServerPool(val context: Context) {
     }
 
     fun putCacheByHost(host: String, ftpClient: CoreFTPClient) {
-
         _serverFTPMap.update { map ->
             map.toMutableMap().apply {
-                put(host, FTPClientCache(ftpClient))
+                put(host, ftpClientCacheFactory.create(ftpClient))
                 println("Put Cache ByHost")
             }
         }
@@ -46,18 +64,15 @@ class FTPServerPool(val context: Context) {
         host: String,
         port: Int,
         user: String,
-        password: String,
-        transferredFileDao: TransferredFileDao,
-        thumbnailCacheDao: ThumbnailCacheDao
+        password: String
     ): Boolean {
         val createNewClient =
-            createNewClient(host, port, user, password, transferredFileDao, thumbnailCacheDao)
-        val ftpClientCache = FTPClientCache(coreFTPClient = createNewClient)
+            createNewClient(host, port, user, password)
+        val ftpClientCache = ftpClientCacheFactory.create(createNewClient)
         if (createNewClient.initClient() && ftpClientCache.thumbnailFTPClient.initClient()) {
             _serverFTPMap.update { map ->
                 map.toMutableMap().apply {
                     put(host, ftpClientCache)
-                    println("Put Cache ByHost")
                 }
             }
             return true
@@ -69,9 +84,7 @@ class FTPServerPool(val context: Context) {
         host: String,
         port: Int,
         user: String,
-        password: String,
-        transferredFileDao: TransferredFileDao,
-        thumbnailCacheDao: ThumbnailCacheDao
+        password: String
     ): CoreFTPClient {
         return CoreFTPClient(
             host,
@@ -82,34 +95,12 @@ class FTPServerPool(val context: Context) {
         )
     }
 
-    fun addToDownloadList(singleFTPClient: TransferFTPClient) {
-        _downloadFTPSet.value = _downloadFTPSet.value.toMutableSet().apply { add(singleFTPClient) }
-
-    }
-
-    fun removeFromDownloadList(singleFTPClient: TransferFTPClient) {
-        _serverFTPMap.value[singleFTPClient.host]?.idleClientFromDownload(singleFTPClient)
-        _downloadFTPSet.value =
-            _downloadFTPSet.value.toMutableSet().apply { remove(singleFTPClient) }
-    }
-
-    fun addToUploadList(singleFTPClient: TransferFTPClient) {
-        _uploadFTPSet.value = _uploadFTPSet.value.toMutableSet().apply { add(singleFTPClient) }
-    }
-
-    fun removeFromUploadList(singleFTPClient: TransferFTPClient) {
-        _serverFTPMap.value[singleFTPClient.host]?.idleClientFromUpload(singleFTPClient)
-        _uploadFTPSet.value =
-            _uploadFTPSet.value.toMutableSet().apply { remove(singleFTPClient) }
-    }
 
     suspend fun testHostServerConnectivity(
         host: String,
         passwd: String,
         user: String,
         port: Int,
-        transferredFileDao: TransferredFileDao,
-        thumbnailCacheDao: ThumbnailCacheDao
     ): Boolean {
         val ftpClient =
             BaseFTPClient(

@@ -11,15 +11,16 @@ import java.time.ZoneId
  */
 data class FileItemInfo(
     val name: String = "aaasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasd",
-    val isDir: Boolean = false,
+    val isDir: Boolean = true,
     val pathPrefix: String = "",
     val user: String = "",
     val timeStamp: Long = 0,
     val size: Long = 0,
     val timeStampZoneId: ZoneId = ZoneId.systemDefault(),
     val transferStatus: TransferStatus = TransferStatus.Initial,
-    val localUri: String = "",
-    val md5: String = ""
+    val localImageUri: String = "",
+    val md5: String = "",
+    val fullPath: String = "$pathPrefix/$name"
 )
 
 fun FTPFile.toFileItemInfo(prefix: String, md5: String, localUri: String): FileItemInfo =
@@ -32,5 +33,5 @@ fun FTPFile.toFileItemInfo(prefix: String, md5: String, localUri: String): FileI
         size,
         timestamp.timeZone.toZoneId(),
         md5 = md5,
-        localUri = localUri
+        localImageUri = localUri
     )

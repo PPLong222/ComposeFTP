@@ -20,6 +20,7 @@ import indi.pplong.composelearning.core.base.ui.LocalFileAsyncImage
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.core.util.FileUtil
+import java.io.InputStream
 
 /**
  * Description:
@@ -29,6 +30,7 @@ import indi.pplong.composelearning.core.util.FileUtil
 @Composable
 fun FileUploadItem(
     transferringFile: TransferringFile,
+    loadImage: (InputStream) -> Unit = {}
 ) {
     Row(
         Modifier
@@ -41,7 +43,7 @@ fun FileUploadItem(
 
         ) {
         LocalFileAsyncImage(
-            Uri.parse(transferringFile.transferredFileItem.localUri)
+            Uri.parse(transferringFile.transferredFileItem.localImageUri)
         )
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier) {

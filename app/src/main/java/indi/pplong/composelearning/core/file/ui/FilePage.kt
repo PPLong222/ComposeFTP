@@ -3,7 +3,6 @@ package indi.pplong.composelearning.core.file.ui
 import android.Manifest
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,6 +32,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,6 +57,7 @@ import indi.pplong.composelearning.core.file.viewmodel.FilePathUiEffect
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiIntent
 import indi.pplong.composelearning.core.file.viewmodel.FilePathViewModel
 import indi.pplong.composelearning.core.load.model.TransferringFile
+import indi.pplong.composelearning.core.load.ui.TransferBottomSheet
 import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.core.util.PermissionUtils
 import indi.pplong.composelearning.sys.ui.sys.widgets.CommonTopBar
@@ -81,7 +81,6 @@ fun BrowsePage(
                 factory.create(host)
             }
         )
-    Log.d("FilePage", "FilePage: Init ViewModel")
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -138,6 +137,19 @@ fun BrowsePage(
     }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    if (uiState.showTransferSheet) {
+        TransferBottomSheet(
+            onDismissRequest = {
+                viewModel.sendIntent(
+                    FilePathUiIntent.AppBar.SetTransferSheetShow(
+                        false
+                    )
+                )
+            }
+        )
+    }
+
     LaunchedEffect(viewModel.uiEffect) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
@@ -183,19 +195,26 @@ fun BrowsePage(
             }
         }
     }
-    val scrollState = BottomAppBarDefaults.exitAlwaysScrollBehavior()
+
+    val transferringCount by viewModel.transferringCount.collectAsState(0)
 
     Scaffold(
         topBar = {
             CommonTopBar(
                 hasSelect = uiState.appBarStatus == FileSelectStatus.Multiple,
+                host = host,
                 onClickSelect = {
                     viewModel.sendIntent(
                         FilePathUiIntent.AppBar.SelectFileMode(
                             uiState.appBarStatus == FileSelectStatus.Single
                         )
                     )
-                }
+                },
+                onTransferClick = {
+                    viewModel.sendIntent(FilePathUiIntent.AppBar.SetTransferSheetShow(true))
+                },
+                transferredCount = transferringCount,
+                isTransferStatusViewed = uiState.isTransferStatusViewed,
             )
         },
         bottomBar = {
@@ -203,7 +222,6 @@ fun BrowsePage(
                 barStatus = uiState.appBarStatus,
                 onClickFAB = viewModel::bottomAppBarFABActionEvents,
                 events = viewModel::bottomAppBarActionEvents,
-                scrollBehavior = scrollState
             )
         },
         snackbarHost = {
@@ -230,6 +248,7 @@ fun BrowsePage(
                 .padding(paddingValues)
                 .fillMaxWidth()
         ) {
+            ControlPanel(viewModel)
             // Ban Multi FTP Window
 //                LazyRow {
 //                    items(uiState.activeList) { server ->
@@ -263,21 +282,20 @@ fun BrowsePage(
                     }
                 )
             }
-            Spacer(Modifier.height(16.dp))
             if (uiState.loadingState == LoadingState.LOADING) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(64.dp),
-                            strokeWidth = 6.dp
+                            modifier = Modifier.size(48.dp),
+                            strokeWidth = 4.dp
                         )
-                        Text("Loading...", style = MaterialTheme.typography.headlineLarge)
+                        Text("Loading...", style = MaterialTheme.typography.headlineMedium)
                     }
 
                 }
             } else {
                 // Body
-                DirAndFileList(uiState, viewModel::sendIntent, scrollState)
+                DirAndFileList(uiState, viewModel::sendIntent)
             }
 
         }

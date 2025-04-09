@@ -17,9 +17,9 @@ import java.net.InetAddress
  */
 open class BaseFTPClient(
     val host: String,
-    protected val port: Int?,
-    protected val username: String,
-    protected val password: String,
+    val port: Int?,
+    val username: String,
+    val password: String,
     val context: Context
 ) {
     protected val ftpClient: FTPClient = FTPClient()
@@ -29,6 +29,8 @@ open class BaseFTPClient(
 
     fun initClient(): Boolean {
         var res = false
+        // Enable UTF-8 to avoid coding mess
+        ftpClient.autodetectUTF8 = true
         if (port == null) {
             ftpClient.connect(InetAddress.getByName(host))
         } else {
@@ -37,8 +39,12 @@ open class BaseFTPClient(
         res = ftpClient.login(username, password)
         ftpClient.enterLocalPassiveMode()
         ftpClient.setFileType(FTP.BINARY_FILE_TYPE)
+
+        customizeFTPClientSetting()
         return res
     }
+
+    protected open fun customizeFTPClientSetting() {}
 
     suspend fun close() {
         ftpClient.logout()
@@ -57,4 +63,11 @@ open class BaseFTPClient(
         return ftpClient.listFiles()
     }
 
+    fun isConnectionAlive(): Boolean {
+        return try {
+            ftpClient.sendNoOp()
+        } catch (e: Exception) {
+            false
+        }
+    }
 }

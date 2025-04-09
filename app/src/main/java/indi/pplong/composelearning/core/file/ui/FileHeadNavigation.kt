@@ -6,11 +6,11 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -18,13 +18,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import indi.pplong.composelearning.R
+import kotlinx.coroutines.launch
 
 /**
  * Description:
@@ -38,22 +44,34 @@ fun HeadPathNavigation(
 ) {
 
     val pathURI = Uri.parse(path)
+    val rowState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(pathURI) {
+        coroutineScope.launch {
+            if (pathURI.pathSegments.isNotEmpty()) {
+                rowState.animateScrollToItem(pathURI.pathSegments.lastIndex)
+            }
+        }
+    }
     LazyRow(
+        state = rowState,
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
     ) {
         item {
             Icon(
-                imageVector = Icons.Default.Home,
+                painter = painterResource(R.drawable.path),
                 contentDescription = null,
-                modifier = Modifier.clickable {
-                    onPathClick("/")
-                },
+                modifier = Modifier
+                    .size(20.dp)
+                    .clickable {
+                        onPathClick("/")
+                    },
                 tint = MaterialTheme.colorScheme.secondary
             )
         }
         items(pathURI.pathSegments) { segment ->
-            SinglePathText(segment) {
+            SinglePathText(segment, isCurPath = pathURI.pathSegments.last() == segment) {
                 onPathClick(
                     buildPath(
                         pathURI.pathSegments.indexOf(segment),
@@ -63,23 +81,9 @@ fun HeadPathNavigation(
             }
         }
     }
-//        } else {
-//            SinglePathText(pathURI.pathSegments[0]) { onPathClick(buildPath(0, pathURI)) }
-//            SinglePathText("..")
-//            SinglePathText(
-//                pathURI.pathSegments[pathURI.pathSegments.size - 2]
-//            ) { onPathClick(buildPath(pathURI.pathSegments.size - 2, pathURI)) }
-//            SinglePathText(
-//                pathURI.pathSegments.last()
-//            ) { onPathClick(buildPath(pathURI.pathSegments.size - 1, pathURI)) }
-//        }
-
 }
 
 fun buildPath(index: Int, previousUri: Uri): String {
-    if (previousUri.pathSegments.size == 1) {
-        return "/"
-    }
     val uri = Uri.Builder()
     for (i in 0..index) {
         uri.appendPath(previousUri.pathSegments[i])
@@ -89,7 +93,7 @@ fun buildPath(index: Int, previousUri: Uri): String {
 
 @Composable
 fun SinglePathText(
-    pathText: String, onButtonClick: () -> Unit = {}
+    pathText: String, isCurPath: Boolean = false, onButtonClick: () -> Unit = {}
 ) {
     val source = remember { MutableInteractionSource() }
     val ripple = ripple(color = Color.Gray, bounded = true) // 设置涟漪效果的颜色
@@ -99,7 +103,7 @@ fun SinglePathText(
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         modifier = Modifier
             .padding(vertical = 4.dp)
-            .padding(start = 4.dp)
+            .padding(start = 0.dp)
             .clip(RoundedCornerShape(size = 8.dp))
             .clickable(
                 interactionSource = source,
@@ -110,6 +114,7 @@ fun SinglePathText(
         Text(
             text = "/".plus(pathText),
             style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (isCurPath) FontWeight.Medium else FontWeight.Normal,
             maxLines = 1,
             color = MaterialTheme.colorScheme.secondary,
         )

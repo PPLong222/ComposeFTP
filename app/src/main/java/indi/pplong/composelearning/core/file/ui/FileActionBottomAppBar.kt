@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.BottomAppBarDefaults
-import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -90,7 +89,6 @@ fun FileActionBottomAppBar(
     modifier: Modifier = Modifier,
     onClickFAB: (FileSelectStatus) -> Unit = {},
     events: (FileBottomAppBarAction) -> Unit = {},
-    scrollBehavior: BottomAppBarScrollBehavior? = null
 ) {
     val map = mapOf(
         FileBottomAppBarAction.REFRESH to rememberVectorPainter(Icons.Default.Refresh),
@@ -176,7 +174,8 @@ fun FileActionBottomAppBar(
         },
         floatingActionButton = {
             // TODO: Optimization
-            AnimatedContent(barStatus,
+            AnimatedContent(
+                barStatus,
                 transitionSpec = {
                     (fadeIn(animationSpec = tween(200, delayMillis = 150)) +
                             scaleIn(
@@ -198,13 +197,12 @@ fun FileActionBottomAppBar(
                                 beginToShake = true
                                 onClickFAB(status)
                             },
-                            containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
                             elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation(),
                             modifier = Modifier.rotate(rotationAngle)
                         ) {
                             Icon(
                                 painter =
-                                painterResource(R.drawable.ic_arrow_upward),
+                                    painterResource(R.drawable.ic_arrow_upward),
                                 contentDescription = null
                             )
                         }
@@ -219,7 +217,7 @@ fun FileActionBottomAppBar(
                         ) {
                             Icon(
                                 painter =
-                                painterResource(R.drawable.ic_download),
+                                    painterResource(R.drawable.ic_download),
                                 contentDescription = null
                             )
                         }
@@ -227,7 +225,6 @@ fun FileActionBottomAppBar(
                 }
             }
 
-        },
-        scrollBehavior = scrollBehavior
+        }
     )
 }

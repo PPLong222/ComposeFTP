@@ -2,6 +2,7 @@ package indi.pplong.composelearning.core.load.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,13 +14,16 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import indi.pplong.composelearning.core.file.model.FileItemInfo
@@ -33,11 +37,30 @@ import indi.pplong.composelearning.core.load.viewmodel.TransferViewModel
  * @author PPLong
  * @date 10/24/24 8:37 PM
  */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TransferBottomSheet(
+    onDismissRequest: () -> Unit = {}
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        TransferScreen()
+    }
+}
+
+@Preview
 @Composable
 fun TransferScreen() {
     val viewModel = hiltViewModel<TransferViewModel>()
     val uiState by viewModel.uiState.collectAsState()
-    Column {
+
+    Column(
+        modifier = Modifier.fillMaxHeight(0.9f)
+    ) {
         TwinTab(
             selectIndex = uiState.curIndex,
             activatedColor = MaterialTheme.colorScheme.surfaceDim,
@@ -47,7 +70,7 @@ fun TransferScreen() {
         if (uiState.curIndex == 0) {
             DownloadList(uiState.downloadFileList, uiState.alreadyDownloadFileList)
         } else {
-            UploadList(uiState.uploadFileList, uiState.alreadyUploadFileList)
+            UploadList(uiState.uploadFileList, uiState.alreadyUploadFileList, viewModel::sendIntent)
         }
     }
 
@@ -77,7 +100,8 @@ fun DownloadList(
 @Composable
 fun UploadList(
     uploadFileList: List<TransferringFile>,
-    alreadyUploadedList: List<TransferredFileItem>
+    alreadyUploadedList: List<TransferredFileItem>,
+    onIntent: (TransferUiIntent) -> Unit = {}
 ) {
     LazyColumn {
         item {
@@ -90,7 +114,7 @@ fun UploadList(
             TransferHeadText("History")
         }
         items(alreadyUploadedList) { transferredFileItem ->
-            FileTransferredItem(transferredFileItem)
+            FileTransferredItem(transferredFileItem, onIntent)
         }
     }
 }

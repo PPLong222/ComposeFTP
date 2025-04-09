@@ -1,7 +1,15 @@
 package indi.pplong.composelearning.ftp.clients
 
 import android.content.Context
+import android.util.Log
 import indi.pplong.composelearning.ftp.BaseFTPClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.apache.commons.net.ProtocolCommandEvent
+import org.apache.commons.net.ProtocolCommandListener
+import java.time.Duration
 
 /**
  * Description:
@@ -15,6 +23,8 @@ class CoreFTPClient(
     password: String,
     context: Context
 ) : BaseFTPClient(host, port, username, password, context) {
+
+    private val TAG = javaClass.name
 
     fun createDirectory(dirName: String): Boolean {
         return try {
@@ -47,12 +57,45 @@ class CoreFTPClient(
         }
     }
 
+    fun moveFile(originalPath: String, targetPath: String): Boolean {
+        Log.d(TAG, "moveFile: originPath: $originalPath -- targetPath:  $targetPath ")
+        val res = ftpClient.rename(originalPath, targetPath)
+        return res
+    }
 
     fun createThumbnailClient(): ThumbnailFTPClient {
         return ThumbnailFTPClient(host, port, username, password, context)
     }
 
-    fun createTransferClient(): TransferFTPClient {
-        return TransferFTPClient(host, port, username, password, context)
+    override fun customizeFTPClientSetting() {
+        ftpClient.setControlKeepAliveTimeout(Duration.ofSeconds(10))
+        ftpClient.setControlKeepAliveReplyTimeout(Duration.ofSeconds(10))
+
+        val ftpKeepAliveJob = CoroutineScope(Dispatchers.IO).launch {
+            while (ftpClient.isAvailable) {
+                delay(10_000) // Every 10 seconds
+                try {
+                    if (!ftpClient.sendNoOp()) {
+                    }
+                } catch (e: Exception) {
+                }
+            }
+        }
+        val listener = object : ProtocolCommandListener {
+            override fun protocolCommandSent(event: ProtocolCommandEvent?) {
+                Log.d(
+                    TAG,
+                    "protocolCommandSent: command: ${event?.command}, message: ${event?.message}"
+                )
+            }
+
+            override fun protocolReplyReceived(event: ProtocolCommandEvent?) {
+                Log.d(
+                    TAG,
+                    "protocolReplyReceived: command: ${event?.command}, message: ${event?.message}"
+                )
+            }
+        }
+        ftpClient.addProtocolCommandListener(listener)
     }
 }
