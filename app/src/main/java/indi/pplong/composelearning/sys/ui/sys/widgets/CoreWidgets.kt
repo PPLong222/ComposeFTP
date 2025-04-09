@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -20,8 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import indi.pplong.composelearning.R
 
@@ -31,32 +31,14 @@ import indi.pplong.composelearning.R
  * @date 9/26/24 2:44 PM
  */
 
-data class CommonTopBarConfig(
-    val title: String = "ComposeFTP",
-    val showBackAction: Boolean = true,
-    val showMenuAction: Boolean = true,
-    val backAction: () -> Unit = {},
-    val action: () -> Unit = {}
-)
-
-internal class CommonTopBarConfigProvider : PreviewParameterProvider<CommonTopBarConfig> {
-    override val values: Sequence<CommonTopBarConfig> = sequenceOf(
-        CommonTopBarConfig(
-            title = "ComposeFTP",
-            showBackAction = false,
-            backAction = {},
-            action = {},
-        )
-    )
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Preview
 fun CommonTopBar(
-    @PreviewParameter(CommonTopBarConfigProvider::class) config: CommonTopBarConfig = CommonTopBarConfigProvider().values.first(),
     host: String = "192.168.1.1",
     hasSelect: Boolean = false,
+    isTransferStatusViewed: Boolean = true,
+    transferredCount: Int = 0,
     onClickSelect: () -> Unit = {},
     onTransferClick: () -> Unit = {},
 ) {
@@ -78,10 +60,23 @@ fun CommonTopBar(
             }
         },
         actions = {
-            Icon(
-                painter = painterResource(R.drawable.ic_swap_vert), contentDescription = null,
-                modifier = Modifier.clickable { onTransferClick() }
-            )
+            BadgedBox(
+                badge = {
+                    if (transferredCount > 0) {
+                        Badge {
+                            Text(transferredCount.toString())
+                        }
+                    } else if (!isTransferStatusViewed) {
+                        Badge()
+                    }
+                }
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_swap_vert), contentDescription = null,
+                    modifier = Modifier.clickable { onTransferClick() }
+                )
+            }
+
             Spacer(Modifier.width(12.dp))
             AnimatedContent(targetState = hasSelect) { state ->
                 Box(
@@ -102,5 +97,5 @@ fun CommonTopBar(
             containerColor = MaterialTheme.colorScheme.surface,
         )
 
-        )
+    )
 }

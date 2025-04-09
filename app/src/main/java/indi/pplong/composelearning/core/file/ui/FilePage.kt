@@ -32,6 +32,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -194,6 +195,9 @@ fun BrowsePage(
             }
         }
     }
+
+    val transferringCount by viewModel.transferringCount.collectAsState(0)
+
     Scaffold(
         topBar = {
             CommonTopBar(
@@ -208,7 +212,9 @@ fun BrowsePage(
                 },
                 onTransferClick = {
                     viewModel.sendIntent(FilePathUiIntent.AppBar.SetTransferSheetShow(true))
-                }
+                },
+                transferredCount = transferringCount,
+                isTransferStatusViewed = uiState.isTransferStatusViewed,
             )
         },
         bottomBar = {
@@ -280,10 +286,10 @@ fun BrowsePage(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(64.dp),
-                            strokeWidth = 6.dp
+                            modifier = Modifier.size(48.dp),
+                            strokeWidth = 4.dp
                         )
-                        Text("Loading...", style = MaterialTheme.typography.headlineLarge)
+                        Text("Loading...", style = MaterialTheme.typography.headlineMedium)
                     }
 
                 }

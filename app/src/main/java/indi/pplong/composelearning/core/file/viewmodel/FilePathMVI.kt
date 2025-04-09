@@ -27,7 +27,8 @@ data class FilePathUiState(
     val selectedFileList: Set<FileItemInfo> = mutableSetOf(),
     val createDirDialog: CreateDirDialog = CreateDirDialog(),
     val fileSortMode: FileSortTypeMode = FileSortTypeMode(fileSortType = FileSortType.Name, true),
-    val showTransferSheet: Boolean = false
+    val showTransferSheet: Boolean = false,
+    val isTransferStatusViewed: Boolean = true
 ) : UiState
 
 sealed class FilePathUiIntent : UiIntent {

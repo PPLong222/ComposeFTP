@@ -132,12 +132,6 @@ fun DirAndFileList(
     ) {
 
         items(uiState.fileList) { item ->
-            Log.d(
-                "Compose",
-                "Recomposing DirAndFileList: selectedFileList = ${
-                    item
-                }, ${uiState.selectedFileList.firstOrNull()}, ${item == uiState.selectedFileList.firstOrNull()}"
-            )
             CommonFileItem(
                 fileInfo = item,
                 onIntent = onIntent,

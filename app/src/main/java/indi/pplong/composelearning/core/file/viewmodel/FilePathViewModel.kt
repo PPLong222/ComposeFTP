@@ -23,6 +23,8 @@ import indi.pplong.composelearning.core.util.MD5Utils
 import indi.pplong.composelearning.ftp.FTPClientCache
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
@@ -66,9 +68,21 @@ class FilePathViewModel @AssistedInject constructor(
         globalViewModel.pool.serverFTPMap.mapNotNull { it["185.211.4.19"] }
             .flatMapLatest { data -> data.idledClientsQueue.map { it.size } }
 
+    val transferringCount = downloadQueueSize.combine(uploadQueueSize) { a, b -> a + b }
+
 
     init {
         Log.d(TAG, "Init ViewModfel: $host")
+
+
+        launchOnIO {
+            transferringCount.drop(1).collect {
+                setState {
+                    copy(isTransferStatusViewed = false)
+                }
+            }
+        }
+
 //        launchOnIO {
 //            cache = globalViewModel.pool.getCacheByHost(host)!!
 //            getCurrentListFiles()
@@ -180,7 +194,10 @@ class FilePathViewModel @AssistedInject constructor(
             }
 
             is FilePathUiIntent.AppBar.SetTransferSheetShow -> {
-                setState { copy(showTransferSheet = intent.isShow) }
+
+                setState {
+                    copy(showTransferSheet = intent.isShow, isTransferStatusViewed = true)
+                }
             }
         }
     }
