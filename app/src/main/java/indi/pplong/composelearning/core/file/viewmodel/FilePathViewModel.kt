@@ -21,7 +21,11 @@ import indi.pplong.composelearning.core.file.ui.FileSortTypeMode
 import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.core.util.MD5Utils
 import indi.pplong.composelearning.ftp.FTPClientCache
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -46,6 +50,22 @@ class FilePathViewModel @AssistedInject constructor(
 
     // TODO: move to [ThumbnailClient]?
     private val thumbnailQueue: Queue<FileItemInfo> = LinkedList()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val downloadQueueSize =
+        globalViewModel.pool.serverFTPMap.mapNotNull { it["185.211.4.19"] }
+            .flatMapLatest { data -> data.downloadQueue.map { it.size } }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val uploadQueueSize =
+        globalViewModel.pool.serverFTPMap.mapNotNull { it["185.211.4.19"] }
+            .flatMapLatest { data -> data.uploadQueue.map { it.size } }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val idleQueueSize =
+        globalViewModel.pool.serverFTPMap.mapNotNull { it["185.211.4.19"] }
+            .flatMapLatest { data -> data.idledClientsQueue.map { it.size } }
+
 
     init {
         Log.d(TAG, "Init ViewModfel: $host")

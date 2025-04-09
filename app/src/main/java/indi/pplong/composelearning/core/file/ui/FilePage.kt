@@ -3,7 +3,6 @@ package indi.pplong.composelearning.core.file.ui
 import android.Manifest
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -81,7 +80,6 @@ fun BrowsePage(
                 factory.create(host)
             }
         )
-    Log.d("FilePage", "FilePage: Init ViewModel")
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -244,6 +242,7 @@ fun BrowsePage(
                 .padding(paddingValues)
                 .fillMaxWidth()
         ) {
+            ControlPanel(viewModel)
             // Ban Multi FTP Window
 //                LazyRow {
 //                    items(uiState.activeList) { server ->
