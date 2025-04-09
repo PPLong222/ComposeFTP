@@ -1,5 +1,6 @@
 package indi.pplong.composelearning.core.load.viewmodel
 
+import android.content.Context
 import indi.pplong.composelearning.core.base.mvi.UiEffect
 import indi.pplong.composelearning.core.base.mvi.UiIntent
 import indi.pplong.composelearning.core.base.mvi.UiState
@@ -23,6 +24,9 @@ data class TransferUiState(
 sealed class TransferUiIntent : UiIntent {
     data class MoveForward(val path: String) : TransferUiIntent()
     data class SwitchTab(val index: Int) :
+        TransferUiIntent()
+
+    data class CacheImage(val transferredItemInfo: TransferredFileItem, val context: Context) :
         TransferUiIntent()
 }
 

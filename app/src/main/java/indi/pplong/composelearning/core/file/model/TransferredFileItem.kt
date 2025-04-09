@@ -23,5 +23,6 @@ data class TransferredFileItem(
      * 1: Upload
      */
     val transferType: Int = 0,
-    val localUri: String = ""
+    val localUri: String = "",
+    val localImageUri: String = ""
 )

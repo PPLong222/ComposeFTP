@@ -163,6 +163,16 @@ object FileUtil {
         if (mimeType.startsWith("image/")) return FileType.PNG
         return FileType.OTHER
     }
+
+    fun isFileProviderUriExists(context: Context, uri: Uri): Boolean {
+        return try {
+            context.contentResolver.openFileDescriptor(uri, "r")?.use {
+                true
+            } ?: false
+        } catch (e: Exception) {
+            false
+        }
+    }
 }
 
 object ServerPortInfo {

@@ -34,11 +34,6 @@ data class FilePathUiState(
 sealed class FilePathUiIntent : UiIntent {
     sealed class Browser : FilePathUiIntent() {
         data class MoveForward(val path: String) : Browser()
-        data class Download(
-            val fileItemInfo: FileItemInfo,
-            val localUri: String
-        ) :
-            Browser()
 
         data class OnFileSelect(val fileInfo: FileItemInfo) :
             Browser()

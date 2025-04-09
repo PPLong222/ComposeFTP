@@ -1,6 +1,7 @@
 package indi.pplong.composelearning.core.load.ui
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -20,15 +21,18 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import indi.pplong.composelearning.core.base.ui.LocalFileAsyncImage
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
+import indi.pplong.composelearning.core.load.viewmodel.TransferUiIntent
 import indi.pplong.composelearning.core.util.DateUtil
 import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.core.util.openFileWithUri
@@ -90,9 +94,23 @@ fun FileDownloadItem(
 @Composable
 @Preview
 fun FileTransferredItem(
-    transferItemInfo: TransferredFileItem = TransferredFileItem()
+    transferItemInfo: TransferredFileItem = TransferredFileItem(),
+    onIntent: (TransferUiIntent) -> Unit = {}
 ) {
     val context = LocalContext.current
+    val uri = transferItemInfo.localImageUri.toUri()
+    LaunchedEffect(Unit) {
+        if (!FileUtil.isFileProviderUriExists(
+                context,
+                uri
+            )
+        ) {
+            Log.d("TTTTTTT", "FileTransferredItem: T")
+            onIntent(TransferUiIntent.CacheImage(transferItemInfo, context))
+
+        }
+    }
+
     Column(
         modifier = Modifier
             .background(
@@ -110,7 +128,7 @@ fun FileTransferredItem(
             },
             leadingContent = {
                 LocalFileAsyncImage(
-                    uri = Uri.parse(transferItemInfo.localUri)
+                    uri = Uri.parse(transferItemInfo.localImageUri)
                 )
             },
             supportingContent = {

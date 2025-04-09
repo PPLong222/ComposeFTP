@@ -35,10 +35,10 @@ class ThumbnailFTPClient(
 ) {
     companion object {
         /** Max media cache file size: 2MB */
-        private const val MAX_CACHE_FILE_SIZE = 4 * 1024 * 1024
+        const val MAX_CACHE_FILE_SIZE = 4 * 1024 * 1024
 
         /** Max buffer to hold file cache: 3MB */
-        private const val MAX_DOWNLOAD_SPEED = 3 * 1024 * 1024
+        const val MAX_DOWNLOAD_SPEED = 3 * 1024 * 1024
     }
 
     private val TAG = javaClass.name + "@" + host

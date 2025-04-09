@@ -1,12 +1,23 @@
 package indi.pplong.composelearning.core.load.viewmodel
 
+import android.content.Context
 import android.util.Log
+import androidx.core.net.toUri
 import dagger.hilt.android.lifecycle.HiltViewModel
 import indi.pplong.composelearning.core.base.GlobalRepository
 import indi.pplong.composelearning.core.base.mvi.BaseViewModel
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.TransferredFileDao
+import indi.pplong.composelearning.core.file.model.TransferredFileItem
+import indi.pplong.composelearning.core.util.FileUtil
+import indi.pplong.composelearning.core.util.MD5Utils
+import indi.pplong.composelearning.core.util.getContentUri
+import indi.pplong.composelearning.ftp.clients.ThumbnailFTPClient.Companion.MAX_CACHE_FILE_SIZE
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.BufferedOutputStream
+import java.io.File
+import java.io.FileOutputStream
 import javax.inject.Inject
 
 /**
@@ -127,6 +138,68 @@ class TransferViewModel @Inject constructor(
             }
 
             is TransferUiIntent.MoveForward -> {}
+            is TransferUiIntent.CacheImage -> saveFileToLocal(
+                intent.context,
+                intent.transferredItemInfo
+            )
         }
+    }
+
+    fun saveFileToLocal(context: Context, transferredFileItem: TransferredFileItem) {
+        launchOnIO {
+            val key =
+                MD5Utils.digestMD5AsString((transferredFileItem.serverHost + transferredFileItem.remotePathPrefix + transferredFileItem.remoteName + transferredFileItem.timeMills).toByteArray())
+            val file = File(context.cacheDir, key)
+            context.contentResolver.openInputStream(transferredFileItem.localUri.toUri())
+                ?.use { inputStream ->
+                    BufferedOutputStream(FileOutputStream(file)).use { outputStream ->
+                        val buffer = ByteArray(4096)
+                        var bytesRead: Int
+                        var totalBytesRead = 0
+                        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                            if (totalBytesRead + bytesRead > MAX_CACHE_FILE_SIZE) {
+                                outputStream.write(buffer, 0, MAX_CACHE_FILE_SIZE - totalBytesRead)
+                                break
+                            }
+                            outputStream.write(buffer, 0, bytesRead)
+                            totalBytesRead += bytesRead
+                        }
+                    }
+                }
+
+
+            val bitmap = FileUtil.getVideoThumbnailWithRetriever(
+                context,
+                file.getContentUri(context)!!,
+                48,
+                48
+            )
+
+            val finalFile =
+                MD5Utils.bitmapToCompressedFile(context, bitmap!!, key)
+            val uri = finalFile.getContentUri(context)
+
+            setState {
+                alreadyUploadFileList.map {
+                    if (it == transferredFileItem) {
+                        val copy = it.copy(localImageUri = uri.toString())
+                        launch(Dispatchers.IO) {
+                            fileDao.update(copy)
+                        }
+                        copy
+                    } else {
+                        it
+                    }
+                }
+                copy(uploadFileList = uploadFileList)
+            }
+
+            launch(Dispatchers.IO) {
+                file.delete()
+                Log.d(TAG, "launchThumbnailWork: Delete temp pre file: ${file.name}")
+            }
+        }
+
+
     }
 }

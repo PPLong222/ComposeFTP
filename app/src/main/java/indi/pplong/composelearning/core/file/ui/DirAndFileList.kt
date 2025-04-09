@@ -397,7 +397,7 @@ fun DirAndFileIcon(
                     } else {
                         FileThumbnailAsyncImage(
                             key = fileInfo.md5,
-                            localUri = fileInfo.localUri,
+                            localUri = fileInfo.localImageUri,
                             cache = cache
                         )
                     }
@@ -407,7 +407,7 @@ fun DirAndFileIcon(
                 FileType.VIDEO -> {
                     FileThumbnailAsyncImage(
                         key = fileInfo.md5,
-                        localUri = fileInfo.localUri,
+                        localUri = fileInfo.localImageUri,
                         cache = cache
                     )
                 }

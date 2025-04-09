@@ -70,7 +70,7 @@ fun TransferScreen() {
         if (uiState.curIndex == 0) {
             DownloadList(uiState.downloadFileList, uiState.alreadyDownloadFileList)
         } else {
-            UploadList(uiState.uploadFileList, uiState.alreadyUploadFileList)
+            UploadList(uiState.uploadFileList, uiState.alreadyUploadFileList, viewModel::sendIntent)
         }
     }
 
@@ -100,7 +100,8 @@ fun DownloadList(
 @Composable
 fun UploadList(
     uploadFileList: List<TransferringFile>,
-    alreadyUploadedList: List<TransferredFileItem>
+    alreadyUploadedList: List<TransferredFileItem>,
+    onIntent: (TransferUiIntent) -> Unit = {}
 ) {
     LazyColumn {
         item {
@@ -113,7 +114,7 @@ fun UploadList(
             TransferHeadText("History")
         }
         items(alreadyUploadedList) { transferredFileItem ->
-            FileTransferredItem(transferredFileItem)
+            FileTransferredItem(transferredFileItem, onIntent)
         }
     }
 }

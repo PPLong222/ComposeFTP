@@ -3,6 +3,7 @@ package indi.pplong.composelearning.core.file.model
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 
 /**
  * Description:
@@ -19,4 +20,7 @@ interface TransferredFileDao {
 
     @Query("SELECT * from transferred_file where transferType == 1")
     suspend fun getUploadedItems(): List<TransferredFileItem>
+
+    @Update
+    suspend fun update(item: TransferredFileItem)
 }

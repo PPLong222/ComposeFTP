@@ -2,7 +2,7 @@ package indi.pplong.composelearning.core.base.ui
 
 import android.graphics.Bitmap
 import android.net.Uri
-import androidx.compose.foundation.layout.Box
+import android.util.Log
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,9 +24,7 @@ import coil.compose.AsyncImage
 import coil.imageLoader
 import coil.request.ImageRequest
 import indi.pplong.composelearning.core.util.dpToPx
-import indi.pplong.composelearning.core.util.isImageFile
 import indi.pplong.composelearning.core.util.isMediaWithThumbnail
-import kotlinx.coroutines.launch
 
 /**
  * Description:
@@ -42,40 +40,35 @@ fun LocalFileAsyncImage(
     var isLoading by remember { mutableStateOf(true) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
+    Log.d("AAAAA", "LocalFileAsyncImage: ${uri.toString()}")
     if (uri.isMediaWithThumbnail(context)) {
         LaunchedEffect(uri) {
-            scope.launch {
+//            scope.launch {
 //                if (uri.isImageFile(context)) {
-//                    bitmap = null.  2
+//                    bitmap = null
 //                    isLoading = false
 //                } else {
-//                    withContext(Dispatchers.IO) {text)
+//                    withContext(Dispatchers.IO) {
 //                        withContext(Dispatchers.Main) {
 //                            bitmap = thumbBitmap
 //                            isLoading = true
 //                        }
 //                    }
 //                }
-            }
+//            }
         }
 
-        Box(
-            modifier = Modifier
-                .size(size.dp)
-                .clip(RoundedCornerShape(cornerSize.dp))
-                .shimmerEffect()
-        ) {
-            AsyncImage(
-                imageLoader = context.imageLoader,
-                model = ImageRequest.Builder(context)
-                    .data(if (uri.isImageFile(context)) uri.toString() else bitmap).crossfade(true)
-                    .size(size.dpToPx(context))
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-            )
-        }
+
+        AsyncImage(
+            imageLoader = context.imageLoader,
+            model = ImageRequest.Builder(context)
+                .data(uri.toString()).crossfade(true)
+                .size(size.dpToPx(context))
+                .build(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+        )
+
     } else {
         Icon(
             imageVector = Icons.Outlined.Email,

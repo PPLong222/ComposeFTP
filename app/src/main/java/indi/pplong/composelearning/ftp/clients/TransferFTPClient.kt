@@ -88,7 +88,10 @@ class TransferFTPClient @AssistedInject constructor(
 
         if (result) {
             transferredFileDao.insert(
-                transferringFile.transferredFileItem
+                transferringFile.transferredFileItem.copy(
+                    timeMills = System.currentTimeMillis(),
+                    timeZoneId = ZoneId.systemDefault().id
+                )
             )
             _uploadFileFlow.value = _uploadFileFlow.value.copy(
                 transferStatus = TransferStatus.Successful
@@ -103,7 +106,7 @@ class TransferFTPClient @AssistedInject constructor(
 
     @SuppressLint("NewApi")
     suspend fun downloadFile(
-        fileItemInfo: FileItemInfo, localUri: String = ""
+        fileItemInfo: FileItemInfo
     ) {
         _transferFileFlow.value = fileItemInfo.copy()
         lastRecordTime = System.currentTimeMillis()
@@ -151,7 +154,8 @@ class TransferFTPClient @AssistedInject constructor(
                     serverHost = host,
                     size = fileItemInfo.size,
                     transferType = 0,
-                    localUri = fileItemInfo.localUri
+                    localImageUri = fileItemInfo.localImageUri,
+                    localUri = uri.toString()
                 )
             )
             _transferFileFlow.value = _transferFileFlow.value.copy(

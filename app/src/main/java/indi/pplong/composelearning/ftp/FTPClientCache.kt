@@ -93,13 +93,6 @@ class FTPClientCache @AssistedInject constructor(
         }
     }
 
-    suspend fun downloadFile(fileInfo: FileItemInfo, localUri: String) {
-        getAvailableTransferFTPClient()?.let { client ->
-            client.changePath(fileInfo.pathPrefix)
-            client.downloadFile(fileInfo, localUri)
-        }
-    }
-
     suspend fun uploadFile(transferringFile: TransferringFile, inputStream: InputStream) {
         getAvailableTransferFTPClient()?.let { client ->
             client.changePath(transferringFile.transferredFileItem.remotePathPrefix)

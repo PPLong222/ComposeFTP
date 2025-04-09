@@ -2,7 +2,6 @@ package indi.pplong.composelearning.core.file.viewmodel
 
 import android.util.Log
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.runtime.toMutableStateList
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -141,9 +140,6 @@ class FilePathViewModel @AssistedInject constructor(
     private fun handleBrowserIntent(intent: FilePathUiIntent.Browser) {
         when (intent) {
             is FilePathUiIntent.Browser.MoveForward -> onPathChanged(intent.path)
-            is FilePathUiIntent.Browser.Download -> {
-                downloadSingleFile(intent.fileItemInfo, intent.localUri)
-            }
 
             is FilePathUiIntent.Browser.OnFileSelect -> onFileSelected(
                 intent.fileInfo
@@ -256,22 +252,6 @@ class FilePathViewModel @AssistedInject constructor(
 
     }
 
-    private fun downloadSingleFile(
-        fileInfo: FileItemInfo,
-        localUri: String
-    ) {
-        val newFileInfo =
-            fileInfo.copy(transferStatus = TransferStatus.Loading)
-        setState {
-            copy(fileList = fileList.toMutableStateList().apply {
-                set(indexOf(fileInfo), newFileInfo)
-            })
-        }
-        launchOnIO {
-            cache.downloadFile(newFileInfo, localUri)
-        }
-    }
-
     private fun uploadSingleFile(transferringFile: TransferringFile, inputStream: InputStream) {
         val file = transferringFile.copy(
             transferredFileItem = transferringFile.transferredFileItem.copy(serverHost = cache.coreFTPClient.host)
@@ -329,7 +309,7 @@ class FilePathViewModel @AssistedInject constructor(
             setState {
                 copy(fileList = fileList.map {
                     if (it.md5 == fileItemInfo.md5) {
-                        it.copy(localUri = withLock.toString())
+                        it.copy(localImageUri = withLock.toString())
                     } else {
                         it
                     }
