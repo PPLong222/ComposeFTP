@@ -1,5 +1,6 @@
 package indi.pplong.composelearning.core.file.viewmodel
 
+import android.net.Uri
 import androidx.compose.material3.SnackbarDuration
 import indi.pplong.composelearning.core.base.mvi.UiEffect
 import indi.pplong.composelearning.core.base.mvi.UiIntent
@@ -11,7 +12,6 @@ import indi.pplong.composelearning.core.file.model.FileSelectStatus
 import indi.pplong.composelearning.core.file.ui.FileSortType
 import indi.pplong.composelearning.core.file.ui.FileSortTypeMode
 import indi.pplong.composelearning.core.load.model.TransferringFile
-import java.io.InputStream
 
 /**
  * Description:
@@ -24,7 +24,7 @@ data class FilePathUiState(
     val loadingState: LoadingState = LoadingState.LOADING,
     val actionLoadingState: RequestingState = RequestingState.DONE,
     val appBarStatus: FileSelectStatus = FileSelectStatus.Single,
-    val selectedFileList: Set<FileItemInfo> = mutableSetOf(),
+//    val selectedFileList: Set<FileItemInfo> = mutableSetOf(),
     val createDirDialog: CreateDirDialog = CreateDirDialog(),
     val fileSortMode: FileSortTypeMode = FileSortTypeMode(fileSortType = FileSortType.Name, true),
     val showTransferSheet: Boolean = false,
@@ -52,7 +52,7 @@ sealed class FilePathUiIntent : UiIntent {
         data class SelectFileMode(val select: Boolean) : AppBar()
         data object OnDownloadButtonClick : AppBar()
 
-        data class Upload(val transferringFile: TransferringFile, val inputStream: InputStream) :
+        data class Upload(val transferringFile: TransferringFile, val uri: Uri) :
             AppBar()
 
         data object ClickCreateDirIcon : AppBar()

@@ -20,7 +20,8 @@ data class FileItemInfo(
     val transferStatus: TransferStatus = TransferStatus.Initial,
     val localImageUri: String = "",
     val md5: String = "",
-    val fullPath: String = "$pathPrefix/$name"
+    val fullPath: String = "$pathPrefix/$name",
+    val isSelected: Boolean = false
 )
 
 fun FTPFile.toFileItemInfo(prefix: String, md5: String, localUri: String): FileItemInfo =

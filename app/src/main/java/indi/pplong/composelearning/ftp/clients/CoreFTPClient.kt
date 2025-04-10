@@ -79,9 +79,8 @@ class CoreFTPClient(
             while (ftpClient.isAvailable) {
                 delay(10_000) // Every 10 seconds
                 try {
-                    Log.d(TAG, "customizeFTPClientSetting: Connection lost.")
-                    if (!isConnectionAliveSafe()) {
-                        Log.d(TAG, "customizeFTPClientSetting: Connection lost.")
+                    if (!checkAndKeepAlive()) {
+                        Log.d(TAG, "customizeFTPClientSetting: Connection OK")
                     }
                 } catch (e: Exception) {
                     Log.d(TAG, "customizeFTPClientSetting: Connection lost ${e.message}")

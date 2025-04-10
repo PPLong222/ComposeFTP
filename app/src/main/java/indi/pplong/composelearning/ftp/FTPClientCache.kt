@@ -12,7 +12,6 @@ import indi.pplong.composelearning.ftp.clients.TransferFTPClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import org.apache.commons.net.ftp.FTPFile
-import java.io.InputStream
 
 /**
  * Description: Cache that holds a group of FTP Client for specific host.
@@ -60,6 +59,7 @@ class FTPClientCache @AssistedInject constructor(
                 val client: TransferFTPClient = tempQueue.first()
                 tempQueue.removeAt(0)
                 if (client.isConnectionAlive()) {
+                    Log.d("TTTTT", "getAvailableTransferFTPClient:  reuse")
                     targetClient = client
                     break
                 }
@@ -93,11 +93,10 @@ class FTPClientCache @AssistedInject constructor(
         }
     }
 
-    suspend fun uploadFile(transferringFile: TransferringFile, inputStream: InputStream) {
+    suspend fun uploadFile(transferringFile: TransferringFile, uri: Uri) {
         getAvailableTransferFTPClient()?.let { client ->
             client.changePath(transferringFile.transferredFileItem.remotePathPrefix)
-            Log.d("test", "downloadFile: Emit")
-            client.uploadFile(transferringFile, inputStream)
+            client.uploadFile(transferringFile, uri)
         }
     }
 

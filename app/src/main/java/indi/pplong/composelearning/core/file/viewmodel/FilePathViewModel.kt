@@ -1,7 +1,9 @@
 package indi.pplong.composelearning.core.file.viewmodel
 
+import android.net.Uri
 import android.util.Log
 import androidx.compose.material3.SnackbarDuration
+import androidx.lifecycle.viewModelScope
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -20,17 +22,21 @@ import indi.pplong.composelearning.core.file.ui.FileSortTypeMode
 import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.core.util.MD5Utils
 import indi.pplong.composelearning.ftp.FTPClientCache
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.io.InputStream
 import java.util.LinkedList
 import java.util.Queue
 
@@ -51,6 +57,10 @@ class FilePathViewModel @AssistedInject constructor(
 
     // TODO: move to [ThumbnailClient]?
     private val thumbnailQueue: Queue<FileItemInfo> = LinkedList()
+
+    private var thumbnailJob: Job? = null
+
+    private val signal = Channel<Unit>(Channel.CONFLATED)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val downloadQueueSize =
@@ -73,11 +83,43 @@ class FilePathViewModel @AssistedInject constructor(
     init {
         Log.d(TAG, "Init ViewModfel: $host")
 
-
         launchOnIO {
             transferringCount.drop(1).collect {
                 setState {
                     copy(isTransferStatusViewed = false)
+                }
+            }
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                val task = thumbnailMutex.withLock {
+                    if (thumbnailQueue.isEmpty()) {
+                        null
+                    } else {
+                        thumbnailQueue.poll()
+                    }
+                }
+                if (task != null) {
+                    thumbnailJob = launch {
+                        try {
+                            val uri = cache.launchThumbnailJob(task.name, task.md5)
+                            setState {
+                                copy(fileList = fileList.map {
+                                    if (it.md5 == task.md5) {
+                                        it.copy(localImageUri = uri.toString())
+                                    } else {
+                                        it
+                                    }
+                                })
+                            }
+                        } catch (e: CancellationException) {
+                            Log.d(TAG, "Thumbnail JOB Cancel: ")
+                        }
+                    }
+                    thumbnailJob?.join()
+                } else {
+                    signal.receive()
                 }
             }
         }
@@ -162,7 +204,7 @@ class FilePathViewModel @AssistedInject constructor(
     private fun handleAppBarIntent(intent: FilePathUiIntent.AppBar) {
         when (intent) {
             is FilePathUiIntent.AppBar.Upload -> {
-                uploadSingleFile(intent.transferringFile, intent.inputStream)
+                uploadSingleFile(intent.transferringFile, intent.uri)
             }
 
             is FilePathUiIntent.AppBar.SelectFileMode -> {
@@ -223,18 +265,19 @@ class FilePathViewModel @AssistedInject constructor(
 
     private fun deleteFile() {
         launchOnIO {
-            val fileSize = uiState.value.selectedFileList.size
+            val fileSize = uiState.value.fileList.filter { it.isSelected }
             val deleteFileRes =
-                cache.coreFTPClient.deleteFile(uiState.value.selectedFileList.filter { !it.isDir }
+                cache.coreFTPClient.deleteFile(uiState.value.fileList.filter { it.isSelected }
+                    .filter { !it.isDir }
                     .map { it.name })
             val deleteDirRes =
-                cache.coreFTPClient.deleteDirectory(uiState.value.selectedFileList.filter { it.isDir }
+                cache.coreFTPClient.deleteDirectory(uiState.value.fileList.filter { it.isSelected }
+                    .filter { it.isDir }
                     .map { it.name })
             delay(2000)
             if (deleteFileRes && deleteDirRes) {
                 setState {
                     copy(
-                        selectedFileList = setOf(),
                         appBarStatus = FileSelectStatus.Single
                     )
                 }
@@ -252,19 +295,21 @@ class FilePathViewModel @AssistedInject constructor(
 
     }
 
-    private fun uploadSingleFile(transferringFile: TransferringFile, inputStream: InputStream) {
+    private fun uploadSingleFile(transferringFile: TransferringFile, uri: Uri) {
         val file = transferringFile.copy(
             transferredFileItem = transferringFile.transferredFileItem.copy(serverHost = cache.coreFTPClient.host)
         )
 
         launchOnIO {
-            cache.uploadFile(file, inputStream)
+            cache.uploadFile(file, uri)
         }
     }
 
     private fun onPathChanged(targetPath: String) {
-        thumbnailQueue.clear()
         launchOnIO {
+            thumbnailQueue.clear()
+            thumbnailJob?.cancel()
+
             setState { copy(loadingState = LoadingState.LOADING) }
 
             val fileList = runCatching { cache.changePathAndGetFiles(targetPath) }
@@ -297,25 +342,33 @@ class FilePathViewModel @AssistedInject constructor(
         if (thumbnailQueue.contains(fileItemInfo)) {
             return
         }
-        thumbnailQueue.offer(fileItemInfo)
+
         launchOnIO {
-            val withLock = thumbnailMutex.withLock {
-                thumbnailQueue.peek()
-                val launchThumbnailJob =
-                    cache.launchThumbnailJob(fileItemInfo.name, fileItemInfo.md5)
-                launchThumbnailJob
+            thumbnailMutex.withLock {
+                thumbnailQueue.offer(fileItemInfo)
             }
-            thumbnailQueue.poll()
-            setState {
-                copy(fileList = fileList.map {
-                    if (it.md5 == fileItemInfo.md5) {
-                        it.copy(localImageUri = withLock.toString())
-                    } else {
-                        it
-                    }
-                })
-            }
+            signal.send(Unit)
         }
+
+//        thumbnailJob = viewModelScope.launch(Dispatchers.IO) {
+//            val uri = thumbnailMutex.withLock {
+//                thumbnailQueue.peek()
+//                val launchThumbnailJob =
+//                    cache.launchThumbnailJob(fileItemInfo.name, fileItemInfo.md5)
+//                launchThumbnailJob
+//            }
+//
+//            thumbnailQueue.poll()
+//            setState {
+//                copy(fileList = fileList.map {
+//                    if (it.md5 == fileItemInfo.md5) {
+//                        it.copy(localImageUri = uri.toString())
+//                    } else {
+//                        it
+//                    }
+//                })
+//            }
+//        }
 
     }
 
@@ -347,11 +400,14 @@ class FilePathViewModel @AssistedInject constructor(
 
     private fun onFileSelected(fileInfo: FileItemInfo) {
         setState {
-            val ifContains = selectedFileList.contains(fileInfo)
-            val newSet = selectedFileList.toMutableSet().apply {
-                if (ifContains) remove(fileInfo) else add(fileInfo)
+            val newFileList = uiState.value.fileList.toMutableList().map {
+                if (it.md5 == fileInfo.md5) {
+                    it.copy(isSelected = it.isSelected.not())
+                } else {
+                    it
+                }
             }
-            copy(selectedFileList = newSet)
+            copy(fileList = newFileList)
         }
     }
 
@@ -361,7 +417,7 @@ class FilePathViewModel @AssistedInject constructor(
         }
         launchOnIO {
             var tempFileList = uiState.value.fileList.toMutableList()
-            uiState.value.selectedFileList.forEach {
+            uiState.value.fileList.filter { it.isSelected }.forEach {
                 val newFileInfo =
                     it.copy(transferStatus = TransferStatus.Loading)
                 tempFileList[tempFileList.indexOf(it)] = newFileInfo
@@ -478,13 +534,12 @@ class FilePathViewModel @AssistedInject constructor(
         setState {
             copy(
                 appBarStatus = if (select) FileSelectStatus.Multiple else FileSelectStatus.Single,
-                selectedFileList = mutableSetOf(),
                 fileList = fileList.map {
                     // fix bug when selecting not effect
                     if (it.transferStatus == TransferStatus.Successful || it.transferStatus == TransferStatus.Failed) {
-                        it.copy(transferStatus = TransferStatus.Initial)
+                        it.copy(transferStatus = TransferStatus.Initial, isSelected = false)
                     } else {
-                        it
+                        it.copy(isSelected = false)
                     }
                 }
             )

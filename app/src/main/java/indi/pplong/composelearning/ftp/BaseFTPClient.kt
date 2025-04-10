@@ -66,7 +66,7 @@ open class BaseFTPClient(
         return ftpClient.listFiles()
     }
 
-    suspend fun isConnectionAliveSafe(): Boolean {
+    suspend fun checkAndKeepAlive(): Boolean {
         return try {
             mutex.withLock {
                 ftpClient.sendNoOp()

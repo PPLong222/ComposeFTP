@@ -131,13 +131,13 @@ fun DirAndFileList(
         state = state
     ) {
 
-        items(uiState.fileList) { item ->
+        items(uiState.fileList, key = { it.md5 }) { item ->
             CommonFileItem(
                 fileInfo = item,
                 onIntent = onIntent,
                 isLast = uiState.fileList.last() == item,
                 isOnSelectMode = uiState.appBarStatus == FileSelectStatus.Multiple,
-                isSelect = uiState.selectedFileList.contains(item),
+                isSelect = item.isSelected,
                 scrollBlock = {
                     // TODO: Consider UiEffect?
                     currentScrollPos = it

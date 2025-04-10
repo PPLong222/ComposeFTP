@@ -91,21 +91,20 @@ fun BrowsePage(
         if (uri != null) {
             val fileSize = FileUtil.getFileSize(context, uri)
             val fileName = FileUtil.getFileName(context, uri)
-            context.contentResolver.openInputStream(uri)?.let { stream ->
-                viewModel.sendIntent(
-                    FilePathUiIntent.AppBar.Upload(
-                        TransferringFile(
-                            transferredFileItem = TransferredFileItem(
-                                remoteName = fileName,
-                                remotePathPrefix = uiState.path,
-                                size = fileSize,
-                                transferType = 1,
-                                localUri = uri.toString()
-                            )
-                        ), stream
-                    )
+            viewModel.sendIntent(
+                FilePathUiIntent.AppBar.Upload(
+                    TransferringFile(
+                        transferredFileItem = TransferredFileItem(
+                            remoteName = fileName,
+                            remotePathPrefix = uiState.path,
+                            size = fileSize,
+                            transferType = 1,
+                            localUri = uri.toString()
+                        )
+                    ), uri
                 )
-            }
+            )
+
             // Make this uri read permission persistable
             PermissionUtils.takePersistableUriPermission(context.contentResolver, uri)
         }

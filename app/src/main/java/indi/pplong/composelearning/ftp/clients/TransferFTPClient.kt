@@ -2,6 +2,8 @@ package indi.pplong.composelearning.ftp.clients
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.net.Uri
+import android.util.Log
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -16,8 +18,9 @@ import indi.pplong.composelearning.ftp.PoolContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.runBlocking
+import org.apache.commons.net.ProtocolCommandEvent
+import org.apache.commons.net.ProtocolCommandListener
 import org.apache.commons.net.io.CopyStreamAdapter
-import java.io.InputStream
 import java.text.DecimalFormat
 import java.time.ZoneId
 
@@ -41,6 +44,7 @@ class TransferFTPClient @AssistedInject constructor(
         private const val FLOW_EMIT_INTERVAL = 250L
     }
 
+    private val TAG = javaClass.name
     private var lastRecordTime: Long = 0L
     private var _transferFileFlow = MutableStateFlow<FileItemInfo>(FileItemInfo())
     val transferFileFlow = _transferFileFlow.asStateFlow()
@@ -48,7 +52,7 @@ class TransferFTPClient @AssistedInject constructor(
     private var _uploadFileFlow = MutableStateFlow<TransferringFile>(TransferringFile())
     val uploadFileFlow = _uploadFileFlow.asStateFlow()
 
-    suspend fun uploadFile(transferringFile: TransferringFile, inputStream: InputStream) {
+    suspend fun uploadFile(transferringFile: TransferringFile, uri: Uri) {
 
         lastRecordTime = System.currentTimeMillis()
         var tempBytes = 0
@@ -79,10 +83,13 @@ class TransferFTPClient @AssistedInject constructor(
             }
         }
         var result = false
-        inputStream.use {
-            result = ftpClient.storeUniqueFile(
+        if (!isConnectionAlive()) {
+            Log.e(TAG, "uploadFile: FTP Client Not Alive")
+        }
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            result = ftpClient.storeFile(
                 transferringFile.transferredFileItem.remotePathPrefix + "/" + transferringFile.transferredFileItem.remoteName,
-                inputStream
+                stream
             )
         }
 
@@ -167,6 +174,25 @@ class TransferFTPClient @AssistedInject constructor(
                 transferStatus = TransferStatus.Failed
             )
         }
+    }
+
+    override fun customizeFTPClientSetting() {
+        val listener = object : ProtocolCommandListener {
+            override fun protocolCommandSent(event: ProtocolCommandEvent?) {
+                Log.d(
+                    TAG,
+                    "protocolCommandSent: command: ${event?.command}, message: ${event?.message}"
+                )
+            }
+
+            override fun protocolReplyReceived(event: ProtocolCommandEvent?) {
+                Log.d(
+                    TAG,
+                    "protocolReplyReceived: command: ${event?.command}, message: ${event?.message}"
+                )
+            }
+        }
+        ftpClient.addProtocolCommandListener(listener)
     }
 
     @AssistedFactory

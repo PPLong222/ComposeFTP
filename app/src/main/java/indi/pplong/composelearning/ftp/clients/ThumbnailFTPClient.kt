@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import indi.pplong.composelearning.core.base.FileType
+import indi.pplong.composelearning.core.cache.GlobalCacheList
 import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.core.util.MD5Utils
 import indi.pplong.composelearning.core.util.MediaUtils
@@ -12,6 +13,7 @@ import indi.pplong.composelearning.ftp.BaseFTPClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import org.apache.commons.net.ProtocolCommandEvent
@@ -20,6 +22,8 @@ import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.time.Duration
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.coroutines.coroutineContext
 
 /**
  * Description: FTP Client that handles thumbnail generation
@@ -63,6 +67,7 @@ class ThumbnailFTPClient(
                     var bytesRead: Int
                     var totalBytesRead = 0
                     while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                        coroutineContext.ensureActive()
                         if (totalBytesRead + bytesRead > MAX_CACHE_FILE_SIZE) {
                             outputStream.write(buffer, 0, MAX_CACHE_FILE_SIZE - totalBytesRead)
                             break
@@ -77,13 +82,13 @@ class ThumbnailFTPClient(
                     48,
                     48
                 )
-//            if (bitmap == null) {
-//                ftpClient.completePendingCommand()
-//                return null
-//            }
                 val finalFile =
                     MD5Utils.bitmapToCompressedFile(context, bitmap!!, key)
                 uri = finalFile.getContentUri(context)
+                GlobalCacheList.map.put(
+                    key,
+                    finalFile.getContentUri(context).toString()
+                )
             }
 
             // Remove origin preview file
@@ -91,13 +96,29 @@ class ThumbnailFTPClient(
                 file.delete()
                 Log.d(TAG, "launchThumbnailWork: Delete temp pre file: ${file.name}")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "launchVideoThumbnailWork: Exception when using stream")
+        } catch (e: CancellationException) {
+            Log.d(TAG, "Thumbnail job cancelled for $fileName")
             return null
+        } catch (e: Exception) {
+            Log.e(
+                TAG,
+                "launchVideoThumbnailWork: Exception when using stream.\n ${e.message} \n ${e.stackTrace}"
+            )
+            return null
+        } finally {
+            try {
+                ftpClient.completePendingCommand()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in completePendingCommand: ${e.message}")
+            }
+
+            // 异步删除原始文件
+            CoroutineScope(Dispatchers.IO).launch {
+                file.delete()
+                Log.d(TAG, "launchThumbnailWork: Deleted temp file: ${file.name}")
+            }
         }
 
-        // Important:
-        ftpClient.completePendingCommand()
         Log.d(TAG, "launchVideoThumbnailWork: ${uri.toString()}")
         return uri
     }
@@ -112,6 +133,7 @@ class ThumbnailFTPClient(
                     var bytesRead: Int
                     var totalBytesRead = 0
                     while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                        coroutineContext.ensureActive()
                         outputStream.write(buffer, 0, bytesRead)
                         totalBytesRead += bytesRead
                     }
@@ -125,13 +147,28 @@ class ThumbnailFTPClient(
             }
 
             MediaUtils.compressImageQuality(file, finalFile, 80, context)
-        } catch (e: Exception) {
-            Log.e(TAG, "launchVideoThumbnailWork: Exception when using stream")
+
+            GlobalCacheList.map.put(
+                key,
+                finalFile.getContentUri(context).toString()
+            )
+        } catch (e: CancellationException) {
+            Log.d(TAG, "Thumbnail job cancelled for $fileName")
             return null
+        } catch (e: Exception) {
+            Log.e(
+                TAG,
+                "launchPhotoThumbnailWork: Exception when using stream.\n ${e.message} \n ${e.stackTrace}"
+            )
+            return null
+        } finally {
+            try {
+                ftpClient.completePendingCommand()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in completePendingCommand: ${e.message}")
+            }
         }
 
-        // Important:
-        ftpClient.completePendingCommand()
         return finalFile.getContentUri(context)
     }
 
@@ -143,8 +180,8 @@ class ThumbnailFTPClient(
             while (ftpClient.isAvailable) {
                 delay(10_000) // Every 10 seconds
                 try {
-                    if (!isConnectionAliveSafe()) {
-                        Log.d(TAG, "customizeFTPClientSetting: Connection lost.")
+                    if (!checkAndKeepAlive()) {
+                        Log.d(TAG, "customizeFTPClientSetting: Connection OK.")
                     }
                 } catch (e: Exception) {
                     Log.d(TAG, "customizeFTPClientSetting: Connection lost ${e.message}")

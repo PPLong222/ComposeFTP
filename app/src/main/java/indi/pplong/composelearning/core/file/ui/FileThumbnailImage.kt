@@ -11,8 +11,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import coil.Coil
+import coil.annotation.ExperimentalCoilApi
+import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
+import coil.memory.MemoryCache
 import coil.request.ImageRequest
 import indi.pplong.composelearning.core.base.ui.shimmerEffect
 import indi.pplong.composelearning.core.cache.GlobalCacheList
@@ -88,4 +92,49 @@ fun FileThumbnailAsyncImage(
         }
     }
 
+}
+
+@OptIn(ExperimentalCoilApi::class)
+@Composable
+fun FileThumbnailAsyncImage1(
+    key: String,
+    localUri: String,
+    cache: () -> Unit
+) {
+
+    Log.d("FileThumbnailAsyncImage1", "FileThumbnailAsyncImage1: key: $key, uri: $localUri")
+    val context = LocalContext.current
+    val imageLoader = Coil.imageLoader(context)
+    LaunchedEffect(Unit) {
+        val memoryHit = imageLoader.memoryCache?.get(MemoryCache.Key(key))
+        if (memoryHit != null) {
+            Log.d("FileThumbnailAsyncImage1", "FileThumbnailAsyncImage1: Found in memory cache!")
+        } else {
+            Log.d(
+                "FileThumbnailAsyncImage1",
+                "FileThumbnailAsyncImage1: NOT Found in memory cache!"
+            )
+            val diskHit = imageLoader.diskCache?.openSnapshot(key)
+            if (diskHit != null) {
+                Log.d("FileThumbnailAsyncImage1", "FileThumbnailAsyncImage1: Found in disk cache!")
+                diskHit.close()
+            } else {
+                Log.d(
+                    "FileThumbnailAsyncImage1",
+                    "FileThumbnailAsyncImage1: NOT Found in disk cache!"
+                )
+                cache()
+            }
+        }
+    }
+    AsyncImage(
+        model = ImageRequest.Builder(context)
+            .data(localUri)
+            .crossfade(true)
+            .memoryCacheKey(key)
+            .diskCacheKey(key)
+            .build(),
+        contentDescription = null,
+        imageLoader = Coil.imageLoader(context)
+    )
 }
