@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import org.apache.commons.net.ProtocolCommandEvent
 import org.apache.commons.net.ProtocolCommandListener
 import java.io.BufferedOutputStream
@@ -45,8 +46,8 @@ class ThumbnailFTPClient(
 
     suspend fun launchThumbnailWork(fileName: String, key: String): Uri? {
         return when (FileUtil.getFileType(fileName)) {
-            FileType.PNG -> launchPhotoThumbnailWork(fileName, key)
-            FileType.VIDEO -> launchVideoThumbnailWork(fileName, key)
+            FileType.PNG -> mutex.withLock { launchPhotoThumbnailWork(fileName, key) }
+            FileType.VIDEO -> mutex.withLock { launchVideoThumbnailWork(fileName, key) }
             else -> null
         }
     }
@@ -55,40 +56,46 @@ class ThumbnailFTPClient(
         var uri: Uri? = null
         Log.d(TAG, "launchThumbnailWork: Launch for $fileName + $key")
         val file = File(context.cacheDir, key)
-
-        ftpClient.retrieveFileStream(fileName).use { inputStream ->
-            BufferedOutputStream(FileOutputStream(file)).use { outputStream ->
-                val buffer = ByteArray(4096)
-                var bytesRead: Int
-                var totalBytesRead = 0
-                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                    if (totalBytesRead + bytesRead > MAX_CACHE_FILE_SIZE) {
-                        outputStream.write(buffer, 0, MAX_CACHE_FILE_SIZE - totalBytesRead)
-                        break
+        try {
+            ftpClient.retrieveFileStream(fileName).use { inputStream ->
+                BufferedOutputStream(FileOutputStream(file)).use { outputStream ->
+                    val buffer = ByteArray(4096)
+                    var bytesRead: Int
+                    var totalBytesRead = 0
+                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                        if (totalBytesRead + bytesRead > MAX_CACHE_FILE_SIZE) {
+                            outputStream.write(buffer, 0, MAX_CACHE_FILE_SIZE - totalBytesRead)
+                            break
+                        }
+                        outputStream.write(buffer, 0, bytesRead)
+                        totalBytesRead += bytesRead
                     }
-                    outputStream.write(buffer, 0, bytesRead)
-                    totalBytesRead += bytesRead
                 }
-            }
-            val bitmap = FileUtil.getVideoThumbnailWithRetriever(
-                context,
-                file.getContentUri(context)!!,
-                48,
-                48
-            )
+                val bitmap = FileUtil.getVideoThumbnailWithRetriever(
+                    context,
+                    file.getContentUri(context)!!,
+                    48,
+                    48
+                )
 //            if (bitmap == null) {
 //                ftpClient.completePendingCommand()
 //                return null
 //            }
-            val finalFile =
-                MD5Utils.bitmapToCompressedFile(context, bitmap!!, key)
-            uri = finalFile.getContentUri(context)
+                val finalFile =
+                    MD5Utils.bitmapToCompressedFile(context, bitmap!!, key)
+                uri = finalFile.getContentUri(context)
+            }
+
+            // Remove origin preview file
+            CoroutineScope(Dispatchers.IO).launch {
+                file.delete()
+                Log.d(TAG, "launchThumbnailWork: Delete temp pre file: ${file.name}")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "launchVideoThumbnailWork: Exception when using stream")
+            return null
         }
-        // Remove origin preview file
-        CoroutineScope(Dispatchers.IO).launch {
-            file.delete()
-            Log.d(TAG, "launchThumbnailWork: Delete temp pre file: ${file.name}")
-        }
+
         // Important:
         ftpClient.completePendingCommand()
         Log.d(TAG, "launchVideoThumbnailWork: ${uri.toString()}")
@@ -98,23 +105,31 @@ class ThumbnailFTPClient(
     suspend fun launchPhotoThumbnailWork(fileName: String, key: String): Uri? {
         val file = File(context.cacheDir, key)
         val finalFile = File(context.cacheDir, "$key.jpg")
-        ftpClient.retrieveFileStream(fileName).use { inputStream ->
-            BufferedOutputStream(FileOutputStream(file)).use { outputStream ->
-                val buffer = ByteArray(4096)
-                var bytesRead: Int
-                var totalBytesRead = 0
-                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                    outputStream.write(buffer, 0, bytesRead)
-                    totalBytesRead += bytesRead
+        try {
+            ftpClient.retrieveFileStream(fileName).use { inputStream ->
+                BufferedOutputStream(FileOutputStream(file)).use { outputStream ->
+                    val buffer = ByteArray(4096)
+                    var bytesRead: Int
+                    var totalBytesRead = 0
+                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                        outputStream.write(buffer, 0, bytesRead)
+                        totalBytesRead += bytesRead
+                    }
                 }
             }
+
+            // Remove origin preview file
+            CoroutineScope(Dispatchers.IO).launch {
+                file.delete()
+                Log.d(TAG, "launchThumbnailWork: Delete temp pre file: ${file.name}")
+            }
+
+            MediaUtils.compressImageQuality(file, finalFile, 80, context)
+        } catch (e: Exception) {
+            Log.e(TAG, "launchVideoThumbnailWork: Exception when using stream")
+            return null
         }
-        MediaUtils.compressImageQuality(file, finalFile, 80, context)
-        // Remove origin preview file
-        CoroutineScope(Dispatchers.IO).launch {
-            file.delete()
-            Log.d(TAG, "launchThumbnailWork: Delete temp pre file: ${file.name}")
-        }
+
         // Important:
         ftpClient.completePendingCommand()
         return finalFile.getContentUri(context)
@@ -124,13 +139,15 @@ class ThumbnailFTPClient(
         ftpClient.setControlKeepAliveTimeout(Duration.ofSeconds(10))
         ftpClient.setControlKeepAliveReplyTimeout(Duration.ofSeconds(10))
 
-        val ftpKeepAliveJob = CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             while (ftpClient.isAvailable) {
                 delay(10_000) // Every 10 seconds
                 try {
-                    if (!ftpClient.sendNoOp()) {
+                    if (!isConnectionAliveSafe()) {
+                        Log.d(TAG, "customizeFTPClientSetting: Connection lost.")
                     }
                 } catch (e: Exception) {
+                    Log.d(TAG, "customizeFTPClientSetting: Connection lost ${e.message}")
                 }
             }
         }

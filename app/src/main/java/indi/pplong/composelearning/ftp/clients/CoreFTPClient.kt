@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import org.apache.commons.net.ProtocolCommandEvent
 import org.apache.commons.net.ProtocolCommandListener
 import java.time.Duration
@@ -26,18 +27,20 @@ class CoreFTPClient(
 
     private val TAG = javaClass.name
 
-    fun createDirectory(dirName: String): Boolean {
+    suspend fun createDirectory(dirName: String): Boolean {
         return try {
-            ftpClient.makeDirectory(dirName)
+            mutex.withLock { ftpClient.makeDirectory(dirName) }
         } catch (_: Exception) {
             false
         }
     }
 
-    fun deleteDirectory(pathName: List<String>): Boolean {
+    suspend fun deleteDirectory(pathName: List<String>): Boolean {
         return try {
-            pathName.forEach { fileName ->
-                ftpClient.removeDirectory(fileName)
+            mutex.withLock {
+                pathName.forEach { fileName ->
+                    ftpClient.removeDirectory(fileName)
+                }
             }
             true
         } catch (_: Exception) {
@@ -46,10 +49,12 @@ class CoreFTPClient(
     }
 
     // Only in core client
-    fun deleteFile(pathName: List<String>): Boolean {
+    suspend fun deleteFile(pathName: List<String>): Boolean {
         return try {
-            pathName.forEach { fileName ->
-                ftpClient.deleteFile(fileName)
+            mutex.withLock {
+                pathName.forEach { fileName ->
+                    ftpClient.deleteFile(fileName)
+                }
             }
             true
         } catch (_: Exception) {
@@ -57,10 +62,9 @@ class CoreFTPClient(
         }
     }
 
-    fun moveFile(originalPath: String, targetPath: String): Boolean {
+    suspend fun moveFile(originalPath: String, targetPath: String): Boolean {
         Log.d(TAG, "moveFile: originPath: $originalPath -- targetPath:  $targetPath ")
-        val res = ftpClient.rename(originalPath, targetPath)
-        return res
+        return mutex.withLock { ftpClient.rename(originalPath, targetPath) }
     }
 
     fun createThumbnailClient(): ThumbnailFTPClient {
@@ -71,13 +75,16 @@ class CoreFTPClient(
         ftpClient.setControlKeepAliveTimeout(Duration.ofSeconds(10))
         ftpClient.setControlKeepAliveReplyTimeout(Duration.ofSeconds(10))
 
-        val ftpKeepAliveJob = CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             while (ftpClient.isAvailable) {
                 delay(10_000) // Every 10 seconds
                 try {
-                    if (!ftpClient.sendNoOp()) {
+                    Log.d(TAG, "customizeFTPClientSetting: Connection lost.")
+                    if (!isConnectionAliveSafe()) {
+                        Log.d(TAG, "customizeFTPClientSetting: Connection lost.")
                     }
                 } catch (e: Exception) {
+                    Log.d(TAG, "customizeFTPClientSetting: Connection lost ${e.message}")
                 }
             }
         }

@@ -4,6 +4,8 @@ import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.apache.commons.net.ftp.FTP
 import org.apache.commons.net.ftp.FTPClient
 import org.apache.commons.net.ftp.FTPFile
@@ -24,6 +26,7 @@ open class BaseFTPClient(
 ) {
     protected val ftpClient: FTPClient = FTPClient()
     private val TAG = javaClass.name + "@" + host
+    protected val mutex: Mutex = Mutex()
 
     private val ftpClientScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -61,6 +64,16 @@ open class BaseFTPClient(
 
     fun getFiles(): Array<out FTPFile> {
         return ftpClient.listFiles()
+    }
+
+    suspend fun isConnectionAliveSafe(): Boolean {
+        return try {
+            mutex.withLock {
+                ftpClient.sendNoOp()
+            }
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun isConnectionAlive(): Boolean {
