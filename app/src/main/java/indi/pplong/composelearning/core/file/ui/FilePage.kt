@@ -293,8 +293,13 @@ fun BrowsePage(
 
                 }
             } else {
-                // Body
-                DirAndFileList(uiState, viewModel::sendIntent)
+                if (uiState.fileList.isEmpty()) {
+                    EmptyFolderTip()
+                } else {
+                    // Body
+                    DirAndFileList(uiState, viewModel::sendIntent)
+                }
+
             }
 
         }
@@ -347,3 +352,24 @@ fun EmptyConnectionTip(modifier: Modifier = Modifier) {
     }
 }
 
+@Composable
+@Preview
+fun EmptyFolderTip() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            painterResource(R.drawable.file_open),
+            contentDescription = null,
+            modifier = Modifier.size(108.dp)
+        )
+        Text(
+            "Empty Folder",
+            style = MaterialTheme.typography.headlineSmall
+        )
+    }
+}
