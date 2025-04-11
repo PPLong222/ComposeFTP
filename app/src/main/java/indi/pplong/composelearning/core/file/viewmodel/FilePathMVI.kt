@@ -43,6 +43,8 @@ sealed class FilePathUiIntent : UiIntent {
         data class OnFileSortModeChange(val fileSortMode: FileSortTypeMode) : Browser()
 
         data class MoveFile(val originPath: String, val targetPath: String) : Browser()
+
+        data class DeleteFile(val fileInfo: FileItemInfo) : Browser()
     }
 
     sealed class AppBar : FilePathUiIntent() {
@@ -63,7 +65,7 @@ sealed class FilePathUiIntent : UiIntent {
 
     sealed class Dialog : FilePathUiIntent() {
         // Delete File Dialog
-        data object DismissDialog : Dialog()
+        data object DismissAllDialog : Dialog()
 
         /**
          * @param fileName: fileName of current path
@@ -72,6 +74,10 @@ sealed class FilePathUiIntent : UiIntent {
 
         // Create Directory Dialog
         data class CreateDirectory(val fileName: String) : Dialog()
+
+        data class RenameFile(val originalFileName: String, val updatedName: String) : Dialog()
+
+        data class OpenRenameDialog(val originalFileName: String) : Dialog()
     }
 
     sealed class SnackBarHost : FilePathUiIntent() {
@@ -81,6 +87,7 @@ sealed class FilePathUiIntent : UiIntent {
 
 sealed class FilePathUiEffect : UiEffect {
     data object ShowDeleteDialog : FilePathUiEffect()
+    data class ShowFileRenameDialog(val name: String) : FilePathUiEffect()
     data object DismissDeleteDialog : FilePathUiEffect()
     data object OnDeleteFile : FilePathUiEffect()
     data object ShowFileSelectWindow : FilePathUiEffect()
@@ -96,4 +103,9 @@ data class CreateDirDialog(
     val isShow: Boolean = false,
     val fileName: String = "",
     val loadingStatus: LoadingState = LoadingState.INITIAL
+)
+
+data class RenameFileDialog(
+    val isShow: Boolean = false,
+    val originalFileName: String = ""
 )

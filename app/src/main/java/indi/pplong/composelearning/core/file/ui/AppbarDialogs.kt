@@ -6,11 +6,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -112,16 +114,16 @@ fun CreateDirDialog(
         },
         icon = {
             Icon(
-                painter = painterResource(R.drawable.ic_create_new_folder),
+                Icons.Default.Edit,
                 contentDescription = null
             )
         },
         title = {
-            Text("Create A Directory")
+            Text("Rename a file")
         },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Please input the directory name:")
+                Text("Please input the updated name:")
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = fileName,
@@ -137,3 +139,63 @@ fun CreateDirDialog(
         }
     )
 }
+
+@Composable
+@Preview
+fun RenameFileDialog(
+    onConfirmed: (String, String) -> Unit = { _, _ -> },
+    onCancel: () -> Unit = {},
+    originalName: String = "Original File"
+) {
+    var updatedName by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onCancel,
+        confirmButton = {
+            Button(onClick = {
+                onConfirmed(originalName, updatedName)
+            }) {
+                Text(stringResource(R.string.create))
+            }
+
+        },
+        dismissButton = {
+            Button(onClick = onCancel) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+        icon = {
+            Icon(
+                painter = painterResource(R.drawable.ic_create_new_folder),
+                contentDescription = null
+            )
+        },
+        title = {
+            Text("Create A Directory")
+        },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Please input the directory name:")
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = updatedName,
+                    onValueChange = { updatedName = it },
+                    maxLines = 1,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Done
+                    ),
+                    supportingText = {
+                        if (updatedName == originalName) {
+                            Text(
+                                "Updated name can't be the same with original value.",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                )
+            }
+
+
+        }
+    )
+}
+

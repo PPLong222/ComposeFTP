@@ -199,6 +199,10 @@ class FilePathViewModel @AssistedInject constructor(
             is FilePathUiIntent.Browser.MoveFile -> {
                 moveFile(intent.originPath, intent.targetPath)
             }
+
+            is FilePathUiIntent.Browser.DeleteFile -> {
+                deleteFile(intent.fileInfo)
+            }
         }
     }
 
@@ -244,7 +248,7 @@ class FilePathViewModel @AssistedInject constructor(
     private fun handleDialogIntent(intent: FilePathUiIntent.Dialog) {
         when (intent) {
             FilePathUiIntent.Dialog.DeleteFile -> deleteFile()
-            FilePathUiIntent.Dialog.DismissDialog -> {
+            FilePathUiIntent.Dialog.DismissAllDialog -> {
                 // TODO: Unify to UiState
                 sendEffect {
                     FilePathUiEffect.DismissDeleteDialog
@@ -255,6 +259,16 @@ class FilePathViewModel @AssistedInject constructor(
             is FilePathUiIntent.Dialog.CreateDirectory -> {
                 createDirectory(intent.fileName)
             }
+
+            is FilePathUiIntent.Dialog.RenameFile -> {
+                renameFile(intent.originalFileName, intent.updatedName)
+            }
+
+            is FilePathUiIntent.Dialog.OpenRenameDialog -> {
+                sendEffect {
+                    FilePathUiEffect.ShowFileRenameDialog(intent.originalFileName)
+                }
+            }
         }
     }
 
@@ -264,15 +278,17 @@ class FilePathViewModel @AssistedInject constructor(
         }
     }
 
-    private fun deleteFile() {
+    private fun deleteFile(fileInfo: FileItemInfo? = null) {
         launchOnIO {
-            val fileSize = uiState.value.fileList.filter { it.isSelected }.size
+            var handleList =
+                if (fileInfo == null) uiState.value.fileList else listOf(fileInfo.copy(isSelected = true))
+            val fileSize = handleList.filter { it.isSelected }.size
             val deleteFileRes =
-                cache.coreFTPClient.deleteFile(uiState.value.fileList.filter { it.isSelected }
+                cache.coreFTPClient.deleteFile(handleList.filter { it.isSelected }
                     .filter { !it.isDir }
                     .map { it.name })
             val deleteDirRes =
-                cache.coreFTPClient.deleteDirectory(uiState.value.fileList.filter { it.isSelected }
+                cache.coreFTPClient.deleteDirectory(handleList.filter { it.isSelected }
                     .filter { it.isDir }
                     .map { it.name })
             if (deleteFileRes && deleteDirRes) {
@@ -470,6 +486,15 @@ class FilePathViewModel @AssistedInject constructor(
             }
         val finalList = if (fileSortMode.isAscending) sortedList else sortedList.reversed()
         return finalList
+    }
+
+    private fun renameFile(originalName: String, newName: String) {
+        launchOnIO {
+            val res = cache.coreFTPClient.renameFile(originalName, newName)
+            if (res) {
+                refresh()
+            }
+        }
     }
 
     private fun moveFile(originPath: String, targetPath: String) {

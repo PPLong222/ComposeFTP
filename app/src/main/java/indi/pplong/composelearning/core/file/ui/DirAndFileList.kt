@@ -1,12 +1,9 @@
 package indi.pplong.composelearning.core.file.ui
 
-import android.content.ClipData
 import android.content.ClipDescription
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.draganddrop.dragAndDropSource
@@ -28,17 +25,15 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,23 +48,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
-import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import indi.pplong.composelearning.R
 import indi.pplong.composelearning.core.base.FileType
-import indi.pplong.composelearning.core.base.ui.PopupSimpleItem
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.model.FileSelectStatus
@@ -161,13 +151,14 @@ fun CommonFileItem(
     isSelect: Boolean = false,
     scrollBlock: (Int) -> Unit = {}
 ) {
-    var isPopVisible by remember { mutableStateOf(false) }
-    var isFadeIn by remember { mutableStateOf(false) }
-    val alpha by animateFloatAsState(
-        targetValue = if (isFadeIn) 1f else 0f,
-        animationSpec = tween(durationMillis = 250)
-    )
+//    var isPopVisible by remember { mutableStateOf(false) }
+//    var isFadeIn by remember { mutableStateOf(false) }
+//    val alpha by animateFloatAsState(
+//        targetValue = if (isFadeIn) 1f else 0f,
+//        animationSpec = tween(durationMillis = 250)
+//    )
     var shouldHighLight by remember { mutableStateOf(false) }
+    var isMenuExpanded by remember { mutableStateOf(false) }
 
     Column(
         Modifier
@@ -232,13 +223,15 @@ fun CommonFileItem(
             .dragAndDropSource {
                 detectTapGestures(
                     onLongPress = {
-                        startTransfer(
-                            transferData = DragAndDropTransferData(
-                                clipData = ClipData.newPlainText(
-                                    "DragData", fileInfo.fullPath
-                                )
-                            )
-                        )
+                        // TODO: Ban this long press to move file, showing popup selection instead
+//                        startTransfer(
+//                            transferData = DragAndDropTransferData(
+//                                clipData = ClipData.newPlainText(
+//                                    "DragData", fileInfo.fullPath
+//                                )
+//                            )
+//                        )
+                        isMenuExpanded = true
                     },
                     onTap = {
                         if (!isOnSelectMode) {
@@ -262,109 +255,132 @@ fun CommonFileItem(
                 )
             }
     ) {
-        CommonListItem(
-            leadingContent = {
-                DirAndFileIcon(
-                    cache = {
-                        onIntent(
-                            FilePathUiIntent.Browser.CacheItem(fileInfo)
-                        )
-                    },
-                    fileInfo = fileInfo
-                )
-            },
-            headlineContent = {
-                Text(
-                    fileInfo.name,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.widthIn(max = 240.dp),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            },
-            supportingContent = {
-                Row {
-                    Text(
-                        DateUtil.getFormatDate(
-                            fileInfo.timeStamp,
-                            fileInfo.timeStampZoneId
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+        Box {
+            CommonListItem(
+                leadingContent = {
+                    DirAndFileIcon(
+                        cache = {
+                            onIntent(
+                                FilePathUiIntent.Browser.CacheItem(fileInfo)
+                            )
+                        },
+                        fileInfo = fileInfo
                     )
-                    if (!fileInfo.isDir) {
+                },
+                headlineContent = {
+                    Text(
+                        fileInfo.name,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.widthIn(max = 240.dp),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                supportingContent = {
+                    Row {
                         Text(
-                            FileUtil.getFileSize(fileInfo.size),
-                            modifier = Modifier.padding(start = 4.dp),
+                            DateUtil.getFormatDate(
+                                fileInfo.timeStamp,
+                                fileInfo.timeStampZoneId
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
+                        if (!fileInfo.isDir) {
+                            Text(
+                                FileUtil.getFileSize(fileInfo.size),
+                                modifier = Modifier.padding(start = 4.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
-                }
 
-            },
-            trailingContent = {
-                FileTailIconItem(
-                    fileInfo,
-                    onIntent,
-                    isOnSelectMode = isOnSelectMode,
-                    isSelect = isSelect
+                },
+                trailingContent = {
+                    FileTailIconItem(
+                        fileInfo,
+                        onIntent,
+                        isOnSelectMode = isOnSelectMode,
+                        isSelect = isSelect
+                    )
+                },
+                backgroundColor = MaterialTheme.colorScheme.surface
+            )
+
+            DropdownMenu(
+                expanded = isMenuExpanded,
+                onDismissRequest = { isMenuExpanded = false },
+                offset = DpOffset(200.dp, (-10).dp)
+            ) {
+                DropdownMenuItem(
+                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                    text = { Text("Rename") },
+                    onClick = {
+                        onIntent(FilePathUiIntent.Dialog.OpenRenameDialog(fileInfo.name))
+                        isMenuExpanded = false
+                    }
                 )
-            },
-            backgroundColor = MaterialTheme.colorScheme.surface
-        )
+                DropdownMenuItem(
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                    text = { Text("Delete") },
+                    onClick = {
+                        onIntent(FilePathUiIntent.Browser.DeleteFile(fileInfo))
+                        isMenuExpanded = false
+                    }
+                )
+
+//        Popup(
+//            properties = PopupProperties(
+//                focusable = true,
+//                dismissOnClickOutside = true
+//            ),
+//            onDismissRequest = {
+//                isFadeIn = false
+//            },
+//            offset = popupOffset
+//        ) {
+//            Card(
+//                shape = RoundedCornerShape(16.dp),
+//                colors = CardDefaults.cardColors(
+//                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+//                ),
+//                modifier = Modifier
+//                    .widthIn(max = 160.dp)
+//                    .graphicsLayer(alpha = alpha),
+//            ) {
+//                Column(modifier = Modifier.padding(12.dp)) {
+//                    PopupSimpleItem(
+//                        text = "Delete",
+//                        imageVector = Icons.Default.Delete,
+//                        onclick = {
+//                            isPopVisible = false
+//                            isFadeIn = false
+//                        })
+//                    PopupSimpleItem(text = "Rename", imageVector = Icons.Default.Edit)
+//                    PopupSimpleItem(
+//                        text = "Move",
+//                        imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight
+//                    )
+//                }
+//
+//            }
+//
+//            LaunchedEffect(alpha) {
+//                if (alpha == 0f) {
+//                    isPopVisible = false
+//                }
+//            }
+//        }
+            }
+        }
 
 
         if (!isLast) {
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
-        }
-    }
-    if (isPopVisible || alpha > 0F) {
-        Popup(
-            properties = PopupProperties(
-                focusable = true,
-                dismissOnClickOutside = true
-            ),
-            onDismissRequest = {
-                isFadeIn = false
-            },
-            offset = IntOffset(100, 100)
-        ) {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                ),
-                modifier = Modifier
-                    .widthIn(max = 160.dp)
-                    .graphicsLayer(alpha = alpha),
-
-                ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    PopupSimpleItem(
-                        text = "Delete",
-                        imageVector = Icons.Default.Delete,
-                        onclick = {
-                            isPopVisible = false
-                            isFadeIn = false
-                        })
-                    PopupSimpleItem(text = "Rename", imageVector = Icons.Default.Edit)
-                    PopupSimpleItem(
-                        text = "Move",
-                        imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight
-                    )
-                }
-
-            }
-
-            LaunchedEffect(alpha) {
-                if (alpha == 0f) {
-                    isPopVisible = false
-                }
-            }
         }
     }
 }

@@ -62,6 +62,10 @@ class CoreFTPClient(
         }
     }
 
+    suspend fun renameFile(originalName: String, newName: String): Boolean {
+        return mutex.withLock { ftpClient.rename(originalName, newName) }
+    }
+
     suspend fun moveFile(originalPath: String, targetPath: String): Boolean {
         Log.d(TAG, "moveFile: originPath: $originalPath -- targetPath:  $targetPath ")
         return mutex.withLock { ftpClient.rename(originalPath, targetPath) }

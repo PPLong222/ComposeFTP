@@ -82,7 +82,9 @@ fun BrowsePage(
             }
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var showDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renamedOriginalFileName by remember { mutableStateOf("") }
     val context = LocalContext.current
     val openDirectoryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -153,16 +155,17 @@ fun BrowsePage(
         viewModel.uiEffect.collect { effect ->
             when (effect) {
                 is FilePathUiEffect.OnDeleteFile -> {
-                    showDialog = false
+                    showDeleteDialog = false
                     viewModel.sendIntent(FilePathUiIntent.AppBar.Refresh)
                 }
 
                 is FilePathUiEffect.ShowDeleteDialog -> {
-                    showDialog = true
+                    showDeleteDialog = true
                 }
 
                 FilePathUiEffect.DismissDeleteDialog -> {
-                    showDialog = false
+                    showDeleteDialog = false
+                    showRenameDialog = false
                 }
 
                 FilePathUiEffect.ShowFileSelectWindow -> {
@@ -191,6 +194,10 @@ fun BrowsePage(
                     }
                 }
 
+                is FilePathUiEffect.ShowFileRenameDialog -> {
+                    showRenameDialog = true
+                    renamedOriginalFileName = effect.name
+                }
             }
         }
     }
@@ -227,17 +234,32 @@ fun BrowsePage(
             SnackbarHost(hostState = snackbarHostState)
         }
     ) { paddingValues ->
-        if (showDialog) {
+        if (showDeleteDialog) {
             DeleteFileConfirmDialog(
                 onConfirmed = { viewModel.sendIntent(FilePathUiIntent.Dialog.DeleteFile) },
-                onCancel = { viewModel.sendIntent(FilePathUiIntent.Dialog.DismissDialog) }
+                onCancel = { viewModel.sendIntent(FilePathUiIntent.Dialog.DismissAllDialog) }
             )
         }
         if (uiState.createDirDialog.isShow) {
             CreateDirDialog(
                 loadingState = uiState.createDirDialog.loadingStatus,
                 onConfirmed = { viewModel.sendIntent(FilePathUiIntent.Dialog.CreateDirectory(it)) },
-                onCancel = { viewModel.sendIntent(FilePathUiIntent.Dialog.DismissDialog) }
+                onCancel = { viewModel.sendIntent(FilePathUiIntent.Dialog.DismissAllDialog) }
+            )
+        }
+
+        if (showRenameDialog) {
+            RenameFileDialog(
+                onConfirmed = { old, new ->
+                    viewModel.sendIntent(
+                        FilePathUiIntent.Dialog.RenameFile(
+                            old,
+                            new
+                        )
+                    )
+                },
+                onCancel = { viewModel.sendIntent(FilePathUiIntent.Dialog.DismissAllDialog) },
+                originalName = renamedOriginalFileName
             )
         }
 
