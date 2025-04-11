@@ -119,7 +119,7 @@ fun CreateDirDialog(
             )
         },
         title = {
-            Text("Rename a file")
+            Text("Create A Directory")
         },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -170,7 +170,8 @@ fun RenameFileDialog(
             )
         },
         title = {
-            Text("Create A Directory")
+
+            Text("Rename a file")
         },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {

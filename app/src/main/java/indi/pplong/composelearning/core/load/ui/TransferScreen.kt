@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -17,11 +19,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -31,6 +36,7 @@ import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.core.load.viewmodel.TransferUiIntent
 import indi.pplong.composelearning.core.load.viewmodel.TransferViewModel
+import kotlinx.coroutines.launch
 
 /**
  * Description:
@@ -46,7 +52,9 @@ fun TransferBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = {
+        }
     ) {
         TransferScreen()
     }
@@ -57,21 +65,68 @@ fun TransferBottomSheet(
 fun TransferScreen() {
     val viewModel = hiltViewModel<TransferViewModel>()
     val uiState by viewModel.uiState.collectAsState()
-
+    val pagerState = rememberPagerState(
+        pageCount = { 2 },
+        initialPage = 0
+    )
+    val coroutineScope = rememberCoroutineScope()
     Column(
         modifier = Modifier.fillMaxHeight(0.9f)
     ) {
-        TwinTab(
-            selectIndex = uiState.curIndex,
-            activatedColor = MaterialTheme.colorScheme.surfaceDim,
-            deactivatedColor = MaterialTheme.colorScheme.surfaceContainer,
-            onTabClick = { viewModel.sendIntent(TransferUiIntent.SwitchTab(it)) }
-        )
-        if (uiState.curIndex == 0) {
-            DownloadList(uiState.downloadFileList, uiState.alreadyDownloadFileList)
-        } else {
-            UploadList(uiState.uploadFileList, uiState.alreadyUploadFileList, viewModel::sendIntent)
+        TabRow(
+            selectedTabIndex = pagerState.currentPage
+        ) {
+            Tab(selected = pagerState.currentPage == 0, onClick = {
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(0)
+                }
+            }) {
+                Text(
+                    "Download",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
+            }
+            Tab(selected = pagerState.currentPage == 1, onClick = {
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(1)
+                }
+            }) {
+                Text(
+                    "Upload",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
+            }
         }
+
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxHeight(),
+            beyondViewportPageCount = 1,
+            verticalAlignment = Alignment.Top
+        ) { pageIdx ->
+            if (pageIdx == 0) {
+                DownloadList(uiState.downloadFileList, uiState.alreadyDownloadFileList)
+            } else {
+                UploadList(
+                    uiState.uploadFileList,
+                    uiState.alreadyUploadFileList,
+                    viewModel::sendIntent
+                )
+            }
+        }
+//        TwinTab(
+//            selectIndex = uiState.curIndex,
+//            activatedColor = MaterialTheme.colorScheme.surfaceDim,
+//            deactivatedColor = MaterialTheme.colorScheme.surfaceContainer,
+//            onTabClick = { viewModel.sendIntent(TransferUiIntent.SwitchTab(it)) }
+//        )
+//        if (uiState.curIndex == 0) {
+//            DownloadList(uiState.downloadFileList, uiState.alreadyDownloadFileList)
+//        } else {
+//            UploadList(uiState.uploadFileList, uiState.alreadyUploadFileList, viewModel::sendIntent)
+//        }
     }
 
 }
@@ -81,6 +136,7 @@ fun DownloadList(
     downloadFileList: List<FileItemInfo>,
     alreadyDownloadedList: List<TransferredFileItem>
 ) {
+
     LazyColumn {
         item {
             TransferHeadText("Downloading")

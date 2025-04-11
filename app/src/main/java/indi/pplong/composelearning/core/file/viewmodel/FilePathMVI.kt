@@ -104,8 +104,3 @@ data class CreateDirDialog(
     val fileName: String = "",
     val loadingStatus: LoadingState = LoadingState.INITIAL
 )
-
-data class RenameFileDialog(
-    val isShow: Boolean = false,
-    val originalFileName: String = ""
-)
