@@ -51,8 +51,8 @@ class CoreFTPClient(
     // Only in core client
     suspend fun deleteFile(pathName: List<String>): Boolean {
         return try {
-            mutex.withLock {
-                pathName.forEach { fileName ->
+            pathName.forEach { fileName ->
+                mutex.withLock {
                     ftpClient.deleteFile(fileName)
                 }
             }

@@ -62,7 +62,9 @@ fun LocalFileAsyncImage(
         AsyncImage(
             imageLoader = context.imageLoader,
             model = ImageRequest.Builder(context)
-                .data(uri.toString()).crossfade(true)
+                .data(uri.toString())
+
+                .crossfade(true)
                 .size(size.dpToPx(context))
                 .build(),
             contentDescription = null,

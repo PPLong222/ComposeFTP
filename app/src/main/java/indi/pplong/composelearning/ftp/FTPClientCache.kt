@@ -49,9 +49,9 @@ class FTPClientCache @AssistedInject constructor(
 
     val hasUploadNode = uploadQueue.value.isNotEmpty()
     val hasDownloadNode = downloadQueue.value.isNotEmpty()
-    fun getCurrentPath() = coreFTPClient.getCurrentPath()
+    suspend fun getCurrentPath() = coreFTPClient.getCurrentPath()
 
-    fun getAvailableTransferFTPClient(): TransferFTPClient? {
+    suspend fun getAvailableTransferFTPClient(): TransferFTPClient? {
         var targetClient: TransferFTPClient? = null
         if (!idledClientsQueue.value.isEmpty()) {
             val tempQueue = idledClientsQueue.value.toMutableList()
@@ -100,7 +100,7 @@ class FTPClientCache @AssistedInject constructor(
         }
     }
 
-    fun changePathAndGetFiles(path: String? = null): Array<out FTPFile> {
+    suspend fun changePathAndGetFiles(path: String? = null): Array<out FTPFile> {
         if (path != null) {
             val mainRes = coreFTPClient.changePath(path) && thumbnailFTPClient.changePath(path)
             if (!mainRes) {

@@ -50,20 +50,28 @@ open class BaseFTPClient(
     protected open fun customizeFTPClientSetting() {}
 
     suspend fun close() {
-        ftpClient.logout()
-        ftpClient.disconnect()
+        mutex.withLock {
+            ftpClient.logout()
+            ftpClient.disconnect()
+        }
     }
 
-    fun changePath(pathName: String): Boolean {
-        return ftpClient.changeWorkingDirectory(pathName)
+    suspend fun changePath(pathName: String): Boolean {
+        return mutex.withLock {
+            ftpClient.changeWorkingDirectory(pathName)
+        }
     }
 
-    fun getCurrentPath(): String {
-        return ftpClient.printWorkingDirectory() ?: ""
+    suspend fun getCurrentPath(): String {
+        return mutex.withLock {
+            ftpClient.printWorkingDirectory() ?: ""
+        }
     }
 
-    fun getFiles(): Array<out FTPFile> {
-        return ftpClient.listFiles()
+    suspend fun getFiles(): Array<out FTPFile> {
+        return mutex.withLock {
+            ftpClient.listFiles()
+        }
     }
 
     suspend fun checkAndKeepAlive(): Boolean {
@@ -76,11 +84,13 @@ open class BaseFTPClient(
         }
     }
 
-    fun isConnectionAlive(): Boolean {
-        return try {
-            ftpClient.sendNoOp()
-        } catch (e: Exception) {
-            false
+    suspend fun isConnectionAlive(): Boolean {
+        return mutex.withLock {
+            try {
+                ftpClient.sendNoOp()
+            } catch (e: Exception) {
+                false
+            }
         }
     }
 }

@@ -133,7 +133,8 @@ class FilePathViewModel @AssistedInject constructor(
                 launch {
                     it.values.firstOrNull { it.coreFTPClient.host == host }?.let {
                         cache = it
-                        onPathChanged(it.getCurrentPath())
+                        val currentPath = it.getCurrentPath()
+                        onPathChanged(currentPath)
                         Log.d(TAG, ": ${it.coreFTPClient.host}")
                         it
                     }?.downloadQueue?.collect { queue ->

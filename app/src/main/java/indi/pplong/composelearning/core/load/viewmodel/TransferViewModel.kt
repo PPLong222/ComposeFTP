@@ -6,6 +6,7 @@ import androidx.core.net.toUri
 import dagger.hilt.android.lifecycle.HiltViewModel
 import indi.pplong.composelearning.core.base.GlobalRepository
 import indi.pplong.composelearning.core.base.mvi.BaseViewModel
+import indi.pplong.composelearning.core.cache.GlobalCacheList
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.TransferredFileDao
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
@@ -179,8 +180,13 @@ class TransferViewModel @Inject constructor(
                 MD5Utils.bitmapToCompressedFile(context, bitmap!!, key)
             val uri = finalFile.getContentUri(context)
 
+            GlobalCacheList.map.put(
+                finalFile.name.removeSuffix(".jpg"),
+                finalFile.getContentUri(context).toString()
+            )
+
             setState {
-                alreadyUploadFileList.map {
+                val transferredFileItems = alreadyUploadFileList.map {
                     if (it == transferredFileItem) {
                         val copy = it.copy(localImageUri = uri.toString())
                         launch(Dispatchers.IO) {
@@ -191,7 +197,7 @@ class TransferViewModel @Inject constructor(
                         it
                     }
                 }
-                copy(uploadFileList = uploadFileList)
+                copy(alreadyUploadFileList = transferredFileItems)
             }
 
             launch(Dispatchers.IO) {
