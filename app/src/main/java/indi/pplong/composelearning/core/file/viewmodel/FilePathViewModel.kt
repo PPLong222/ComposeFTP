@@ -266,7 +266,7 @@ class FilePathViewModel @AssistedInject constructor(
 
     private fun deleteFile() {
         launchOnIO {
-            val fileSize = uiState.value.fileList.filter { it.isSelected }
+            val fileSize = uiState.value.fileList.filter { it.isSelected }.size
             val deleteFileRes =
                 cache.coreFTPClient.deleteFile(uiState.value.fileList.filter { it.isSelected }
                     .filter { !it.isDir }
@@ -275,7 +275,6 @@ class FilePathViewModel @AssistedInject constructor(
                 cache.coreFTPClient.deleteDirectory(uiState.value.fileList.filter { it.isSelected }
                     .filter { it.isDir }
                     .map { it.name })
-            delay(2000)
             if (deleteFileRes && deleteDirRes) {
                 setState {
                     copy(
@@ -285,7 +284,7 @@ class FilePathViewModel @AssistedInject constructor(
                 sendEffect { FilePathUiEffect.OnDeleteFile }
                 sendEffect {
                     FilePathUiEffect.ShowSnackBar(
-                        message = "You delete ${fileSize} file",
+                        message = "You delete $fileSize file",
                         actionLabel = "Undo",
                         withDismissAction = false,
                         duration = SnackbarDuration.Short
