@@ -546,7 +546,7 @@ fun CommonListItem(
             .fillMaxWidth()
             .heightIn(max = 80.dp)
             .background(backgroundColor)
-            .padding(vertical = 8.dp, horizontal = 8.dp),
+            .padding(vertical = 8.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         leadingContent?.invoke() ?: Box(modifier = Modifier)

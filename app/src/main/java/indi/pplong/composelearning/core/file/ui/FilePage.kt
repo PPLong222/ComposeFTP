@@ -284,7 +284,7 @@ fun BrowsePage(
                 Box(
                     modifier = Modifier
                         .weight(1F)
-                        .padding(horizontal = 8.dp)
+                        .padding(horizontal = 16.dp)
                 ) {
                     HeadPathNavigation(
                         uiState.path
@@ -385,7 +385,7 @@ fun EmptyFolderTip() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
-            painterResource(R.drawable.file_open),
+            painterResource(R.drawable.ic_file_open),
             contentDescription = null,
             modifier = Modifier.size(108.dp)
         )

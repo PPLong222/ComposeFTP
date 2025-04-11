@@ -36,7 +36,7 @@ fun FileThumbnailAsyncImage(
 ) {
     val context = LocalContext.current
     // TODO: Add to param (48 dp is the default)
-    val size = 48.dpToPx(context)
+    val size = 40.dpToPx(context)
     val painter = rememberAsyncImagePainter(
         model = ImageRequest.Builder(context)
             .data(localUri)

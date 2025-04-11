@@ -86,7 +86,7 @@ fun DownloadList(
             TransferHeadText("Downloading")
         }
         items(downloadFileList) { fileItemInfo ->
-            FileDownloadItem(fileItemInfo)
+            FileDownloadingItem(fileItemInfo)
         }
         item {
             TransferHeadText("History")
@@ -108,7 +108,7 @@ fun UploadList(
             TransferHeadText("Uploading")
         }
         items(uploadFileList) { fileItemInfo ->
-            FileUploadItem(fileItemInfo)
+            FileUploadingItem(fileItemInfo)
         }
         item {
             TransferHeadText("History")

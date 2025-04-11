@@ -1,23 +1,16 @@
 package indi.pplong.composelearning.core.load.ui
 
-import android.net.Uri
-import android.util.Log
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,13 +18,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import indi.pplong.composelearning.R
 import indi.pplong.composelearning.core.base.ui.LocalFileAsyncImage
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
+import indi.pplong.composelearning.core.file.ui.CommonListItem
+import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.core.load.viewmodel.TransferUiIntent
 import indi.pplong.composelearning.core.util.DateUtil
 import indi.pplong.composelearning.core.util.FileUtil
@@ -44,19 +41,17 @@ import indi.pplong.composelearning.core.util.openFileWithUri
  */
 
 @Composable
-fun FileDownloadItem(
+fun FileDownloadingItem(
     fileItemInfo: FileItemInfo
 ) {
     Row(
         Modifier
             .fillMaxWidth()
-            .background(color = MaterialTheme.colorScheme.surfaceContainer)
-            .height(64.dp)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
 
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Default.Info, null)
+        Icon(painterResource(R.drawable.ic_description), null, modifier = Modifier.size(40.dp))
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.padding(end = 16.dp)) {
             Text(fileItemInfo.name, style = MaterialTheme.typography.titleSmall)
@@ -92,6 +87,44 @@ fun FileDownloadItem(
 }
 
 @Composable
+fun FileUploadingItem(
+    transferringFile: TransferringFile
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        LocalFileAsyncImage(
+            transferringFile.transferredFileItem.localImageUri.toUri()
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier) {
+            Text(
+                transferringFile.transferredFileItem.remoteName,
+                style = MaterialTheme.typography.titleSmall
+            )
+            if (transferringFile.transferStatus is TransferStatus.Transferring) {
+                Text(
+                    "Download Speed ${FileUtil.getFileSize(transferringFile.transferStatus.speed)} /s",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                LinearProgressIndicator(
+                    progress = {
+                        transferringFile.transferStatus.value
+                    },
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .padding(top = 4.dp, end = 16.dp)
+                        .fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 @Preview
 fun FileTransferredItem(
     transferItemInfo: TransferredFileItem = TransferredFileItem(),
@@ -105,30 +138,24 @@ fun FileTransferredItem(
                 uri
             )
         ) {
-            Log.d("TTTTTTT", "FileTransferredItem: T")
             onIntent(TransferUiIntent.CacheImage(transferItemInfo, context))
-
         }
     }
 
     Column(
         modifier = Modifier
-            .background(
-                color = MaterialTheme.colorScheme.surfaceContainer
-            )
             .clickable {
-                Uri
-                    .parse(transferItemInfo.localUri)
+                transferItemInfo.localUri.toUri()
                     .openFileWithUri(context)
             }
     ) {
-        ListItem(
+        CommonListItem(
             headlineContent = {
                 Text(transferItemInfo.remoteName, style = MaterialTheme.typography.titleSmall)
             },
             leadingContent = {
                 LocalFileAsyncImage(
-                    uri = Uri.parse(transferItemInfo.localImageUri)
+                    uri = transferItemInfo.localImageUri.toUri()
                 )
             },
             supportingContent = {
@@ -144,9 +171,6 @@ fun FileTransferredItem(
                     )
                 }
             },
-            colors = ListItemDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            )
         )
         HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
     }
@@ -155,7 +179,7 @@ fun FileTransferredItem(
 @Composable
 @Preview
 fun PreviewFileLoadItem() {
-    FileDownloadItem(
+    FileDownloadingItem(
         FileItemInfo(
             name = "File",
             transferStatus = TransferStatus.Transferring(
