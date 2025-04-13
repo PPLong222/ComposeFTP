@@ -3,18 +3,22 @@ package indi.pplong.composelearning.core.load.viewmodel
 import android.content.Context
 import android.util.Log
 import androidx.core.net.toUri
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import indi.pplong.composelearning.core.base.GlobalRepository
 import indi.pplong.composelearning.core.base.mvi.BaseViewModel
 import indi.pplong.composelearning.core.cache.GlobalCacheList
-import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.TransferredFileDao
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.core.util.MD5Utils
 import indi.pplong.composelearning.core.util.getContentUri
-import indi.pplong.composelearning.ftp.clients.ThumbnailFTPClient.Companion.MAX_CACHE_FILE_SIZE
+import indi.pplong.composelearning.ftp.ftp.ThumbnailFTPClient.Companion.MAX_CACHE_FILE_SIZE
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.io.BufferedOutputStream
 import java.io.File
@@ -34,65 +38,41 @@ class TransferViewModel @Inject constructor(
 
     private val TAG = javaClass.name
 
-    init {
-        //
-        launchOnIO {
-            globalViewModel.pool.downloadFTPSet.collect {
-                it.forEach { client ->
-                    launch {
-                        client.transferFileFlow.collect { file ->
-                            setState {
-                                copy(downloadFileList = downloadFileList.toMutableList().apply {
-                                    val index = indexOfFirst {
-                                        it.pathPrefix + "/" + it.name == file.pathPrefix + "/" + file.name
-                                    }
-                                    if (index in downloadFileList.indices) {
-                                        if (file.transferStatus is TransferStatus.Transferring) {
-                                            set(index, file)
-                                        } else if (file.transferStatus is TransferStatus.Successful) {
-                                            removeAt(index)
-                                        }
-                                    } else if (file.transferStatus is TransferStatus.Transferring) {
-                                        add(file)
-                                    }
-                                })
-                            }
-                            if (file.transferStatus == TransferStatus.Successful) {
-                                getDownloadedFileList()
-                            }
-                        }
-                    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val downloadTransfers = globalViewModel.pool.downloadFTPSet.flatMapLatest { clientSet ->
+        if (clientSet.isEmpty()) {
+            flowOf(emptyList())
+        } else {
+            val flows = clientSet.map { it.transferFlow() }
+            combine(flows) { arr -> arr.toList() }
+        }
+    }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val uploadTransfers = globalViewModel.pool.uploadFTPSet.flatMapLatest { clientSet ->
+        if (clientSet.isEmpty()) {
+            flowOf(emptyList())
+        } else {
+            val flows = clientSet.map { it.transferFlow() }
+            combine(flows) { arr -> arr.toList() }
+        }
+    }
+
+    init {
+        viewModelScope.launch {
+            downloadTransfers.collect { list ->
+                getDownloadedFileList()
+                setState {
+                    copy(downloadFileList = list)
                 }
             }
         }
-        launchOnIO {
-            globalViewModel.pool.uploadFTPSet.collect {
-                it.forEach { client ->
-                    launch {
-                        client.uploadFileFlow.collect { file ->
-                            setState {
-                                copy(uploadFileList = uploadFileList.toMutableList().apply {
-                                    val index = indexOfFirst {
-                                        it.transferredFileItem.remoteName == file.transferredFileItem.remoteName && it.transferredFileItem.remotePathPrefix == file.transferredFileItem.remotePathPrefix
-                                    }
-                                    if (index in uploadFileList.indices) {
-                                        if (file.transferStatus is TransferStatus.Transferring) {
-                                            set(index, file)
-                                        } else if (file.transferStatus is TransferStatus.Successful) {
-                                            removeAt(index)
-                                        }
-                                    } else if (file.transferStatus is TransferStatus.Transferring) {
-                                        add(file)
-                                    }
-                                })
-                            }
-                            if (file.transferStatus == TransferStatus.Successful) {
-                                getUploadedFileList()
-                            }
-                        }
-                    }
 
+        viewModelScope.launch {
+            uploadTransfers.collect { list ->
+                getUploadedFileList()
+                setState {
+                    copy(uploadFileList = list)
                 }
             }
         }
@@ -103,7 +83,6 @@ class TransferViewModel @Inject constructor(
     }
 
     private fun getUploadedFileList() {
-        println("update")
         launchOnIO {
             val list = fileDao.getUploadedItems().sortedByDescending { it.timeMills }
             setState {
@@ -116,7 +95,6 @@ class TransferViewModel @Inject constructor(
     }
 
     private fun getDownloadedFileList() {
-        Log.d(TAG, "getDownloadedFileList: Download")
         launchOnIO {
             val list = fileDao.getDownloadedItems().sortedByDescending { it.timeMills }
             setState {

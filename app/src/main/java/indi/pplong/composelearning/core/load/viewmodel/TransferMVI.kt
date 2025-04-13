@@ -4,7 +4,6 @@ import android.content.Context
 import indi.pplong.composelearning.core.base.mvi.UiEffect
 import indi.pplong.composelearning.core.base.mvi.UiIntent
 import indi.pplong.composelearning.core.base.mvi.UiState
-import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.load.model.TransferringFile
 
@@ -15,7 +14,7 @@ import indi.pplong.composelearning.core.load.model.TransferringFile
  */
 data class TransferUiState(
     val curIndex: Int = 0,
-    val downloadFileList: List<FileItemInfo> = mutableListOf(),
+    val downloadFileList: List<TransferringFile> = mutableListOf(),
     val uploadFileList: List<TransferringFile> = mutableListOf(),
     val alreadyDownloadFileList: List<TransferredFileItem> = mutableListOf(),
     val alreadyUploadFileList: List<TransferredFileItem> = mutableListOf()

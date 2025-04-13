@@ -52,13 +52,10 @@ import androidx.navigation.compose.rememberNavController
 import indi.pplong.composelearning.R
 import indi.pplong.composelearning.core.base.state.LoadingState
 import indi.pplong.composelearning.core.file.model.FileSelectStatus
-import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiEffect
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiIntent
 import indi.pplong.composelearning.core.file.viewmodel.FilePathViewModel
-import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.core.load.ui.TransferBottomSheet
-import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.core.util.PermissionUtils
 import indi.pplong.composelearning.sys.ui.sys.widgets.CommonTopBar
 import kotlinx.coroutines.launch
@@ -91,20 +88,8 @@ fun BrowsePage(
     ) { uri: Uri? ->
         // 用户选择目录后的处理逻辑
         if (uri != null) {
-            val fileSize = FileUtil.getFileSize(context, uri)
-            val fileName = FileUtil.getFileName(context, uri)
             viewModel.sendIntent(
-                FilePathUiIntent.AppBar.Upload(
-                    TransferringFile(
-                        transferredFileItem = TransferredFileItem(
-                            remoteName = fileName,
-                            remotePathPrefix = uiState.path,
-                            size = fileSize,
-                            transferType = 1,
-                            localUri = uri.toString()
-                        )
-                    ), uri
-                )
+                FilePathUiIntent.AppBar.Upload(uri, uiState.path)
             )
 
             // Make this uri read permission persistable

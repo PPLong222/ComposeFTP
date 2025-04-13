@@ -16,7 +16,9 @@ import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
+import androidx.core.net.toUri
 import indi.pplong.composelearning.core.base.FileType
+import java.io.File
 import java.text.DecimalFormat
 import java.time.Instant
 import java.time.ZoneId
@@ -130,7 +132,7 @@ object FileUtil {
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
-    fun getFileUriInDownloadDir(
+    fun getContentUriInDownloadDir(
         context: Context,
         fileName: String
     ): Uri? {
@@ -147,6 +149,7 @@ object FileUtil {
                 MediaStore.MediaColumns.RELATIVE_PATH,
                 Environment.DIRECTORY_DOWNLOADS
             )
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
 
         // 插入文件到 MediaStore 的 Downloads 目录
@@ -172,6 +175,13 @@ object FileUtil {
         } catch (e: Exception) {
             false
         }
+    }
+
+    fun getFileUriInDownloadDir(context: Context, fileName: String): Uri? {
+        val downloads =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val file = File(downloads, fileName)
+        return file.toUri()
     }
 }
 

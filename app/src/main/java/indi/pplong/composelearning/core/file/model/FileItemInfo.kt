@@ -1,6 +1,7 @@
 package indi.pplong.composelearning.core.file.model
 
 import indi.pplong.composelearning.core.cache.TransferStatus
+import indi.pplong.composelearning.core.util.MD5Utils
 import org.apache.commons.net.ftp.FTPFile
 import java.time.ZoneId
 
@@ -24,6 +25,11 @@ data class FileItemInfo(
     val isSelected: Boolean = false
 )
 
+fun FileItemInfo.getKey(host: String): String {
+    return MD5Utils.digestMD5AsString("$host|$pathPrefix|$name".toByteArray())
+}
+
+
 fun FTPFile.toFileItemInfo(prefix: String, md5: String, localUri: String): FileItemInfo =
     FileItemInfo(
         name,
@@ -33,6 +39,19 @@ fun FTPFile.toFileItemInfo(prefix: String, md5: String, localUri: String): FileI
         timestamp.time.time,
         size,
         timestamp.timeZone.toZoneId(),
+        md5 = md5,
+        localImageUri = localUri
+    )
+
+fun CommonFileInfo.toFileItemInfo(prefix: String, md5: String, localUri: String): FileItemInfo =
+    FileItemInfo(
+        name,
+        isDir,
+        if (prefix == "/") "" else prefix,
+        user,
+        mtime,
+        size,
+        ZoneId.systemDefault(),
         md5 = md5,
         localImageUri = localUri
     )

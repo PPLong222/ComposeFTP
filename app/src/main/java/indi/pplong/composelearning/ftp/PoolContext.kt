@@ -1,6 +1,6 @@
 package indi.pplong.composelearning.ftp
 
-import indi.pplong.composelearning.ftp.clients.TransferFTPClient
+import indi.pplong.composelearning.ftp.base.ITransferFTPClient
 
 /**
  * Description:
@@ -8,11 +8,11 @@ import indi.pplong.composelearning.ftp.clients.TransferFTPClient
  * @date 4/7/25 12:14 PM
  */
 interface PoolContext {
-    fun addToDownloadList(singleFTPClient: TransferFTPClient)
+    fun addToDownloadList(singleFTPClient: ITransferFTPClient)
 
-    fun idleFromDownloadList(singleFTPClient: TransferFTPClient)
+    fun idleFromDownloadList(singleFTPClient: ITransferFTPClient)
 
-    fun addToUploadList(singleFTPClient: TransferFTPClient)
+    fun addToUploadList(singleFTPClient: ITransferFTPClient)
 
-    fun idleFromUploadList(singleFTPClient: TransferFTPClient)
+    fun idleFromUploadList(singleFTPClient: ITransferFTPClient)
 }

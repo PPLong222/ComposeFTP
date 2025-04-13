@@ -18,4 +18,5 @@ data class ServerItem(
     val port: Int,
     val nickname: String,
     val lastConnectedTime: Long,
+    val isSFTP: Boolean
 )

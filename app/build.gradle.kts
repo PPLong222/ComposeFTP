@@ -5,6 +5,7 @@ plugins {
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
 //    id("org.jetbrains.kotlin.kapt")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -81,7 +82,16 @@ dependencies {
 
     // FTP
     implementation(libs.commons.net)
+    // SFTP
+    implementation(libs.sshj) {
+        // Fix dependency version issues
+        exclude("org.bouncycastle", "bcprov-jdk18on")
+    }
+    // Add Algo support for X25519 on Android Platform
+    implementation(libs.bcprov.jdk15to18)
 
+    // Kotlin Serialization
+    implementation(libs.kotlinx.serialization.json)
     // Room
     implementation(libs.androidx.room.runtime)
     annotationProcessor(libs.androidx.room.compiler)

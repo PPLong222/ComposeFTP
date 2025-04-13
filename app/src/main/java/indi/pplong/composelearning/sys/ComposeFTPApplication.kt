@@ -7,7 +7,9 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
 import dagger.hilt.android.HiltAndroidApp
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.io.File
+import java.security.Security
 
 /**
  * Description:
@@ -18,6 +20,15 @@ import java.io.File
 class ComposeFTPApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.insertProviderAt(BouncyCastleProvider(), 1)
+        } else {
+            // 有旧的就先移除，再插入新版
+            Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
+            Security.insertProviderAt(BouncyCastleProvider(), 1)
+        }
+
         val imageLoader = ImageLoader.Builder(this)
             .diskCachePolicy(CachePolicy.ENABLED)
             .memoryCachePolicy(CachePolicy.ENABLED)

@@ -1,4 +1,4 @@
-package indi.pplong.composelearning.ftp.clients
+package indi.pplong.composelearning.ftp.ftp
 
 import android.content.Context
 import android.net.Uri
@@ -9,7 +9,8 @@ import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.core.util.MD5Utils
 import indi.pplong.composelearning.core.util.MediaUtils
 import indi.pplong.composelearning.core.util.getContentUri
-import indi.pplong.composelearning.ftp.BaseFTPClient
+import indi.pplong.composelearning.ftp.FTPConfig
+import indi.pplong.composelearning.ftp.base.IThumbnailFTPClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -31,24 +32,20 @@ import kotlin.coroutines.coroutineContext
  * @date 11/4/24 3:25 PM
  */
 class ThumbnailFTPClient(
-    host: String, port: Int?, username: String, password: String,
-    context: Context
-) : BaseFTPClient(
-    host, port,
-    username,
-    password, context
-) {
+    config: FTPConfig,
+    val context: Context
+) : BaseFTPClient(config), IThumbnailFTPClient {
     companion object {
         /** Max media cache file size: 2MB */
-        const val MAX_CACHE_FILE_SIZE = 4 * 1024 * 1024
+        const val MAX_CACHE_FILE_SIZE = 1 * 1024 * 1024
 
         /** Max buffer to hold file cache: 3MB */
         const val MAX_DOWNLOAD_SPEED = 3 * 1024 * 1024
     }
 
-    private val TAG = javaClass.name + "@" + host
+    private val TAG = javaClass.name + "@" + config.host
 
-    suspend fun launchThumbnailWork(fileName: String, key: String): Uri? {
+    override suspend fun launchThumbnailWork(fileName: String, key: String): Uri? {
         return when (FileUtil.getFileType(fileName)) {
             FileType.PNG -> mutex.withLock { launchPhotoThumbnailWork(fileName, key) }
             FileType.VIDEO -> mutex.withLock { launchVideoThumbnailWork(fileName, key) }
@@ -89,12 +86,6 @@ class ThumbnailFTPClient(
                     key,
                     finalFile.getContentUri(context).toString()
                 )
-            }
-
-            // Remove origin preview file
-            CoroutineScope(Dispatchers.IO).launch {
-                file.delete()
-                Log.d(TAG, "launchThumbnailWork: Delete temp pre file: ${file.name}")
             }
         } catch (e: CancellationException) {
             Log.d(TAG, "Thumbnail job cancelled for $fileName")

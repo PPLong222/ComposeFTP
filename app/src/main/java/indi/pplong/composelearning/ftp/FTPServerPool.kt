@@ -1,8 +1,11 @@
 package indi.pplong.composelearning.ftp
 
 import android.content.Context
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
-import indi.pplong.composelearning.ftp.clients.CoreFTPClient
+import indi.pplong.composelearning.core.file.model.TransferredFileDao
+import indi.pplong.composelearning.ftp.ftp.BaseFTPClient
+import indi.pplong.composelearning.ftp.sftp.SFTPBaseClient
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -20,15 +23,18 @@ import javax.inject.Singleton
 @Singleton
 class FTPServerPool @Inject constructor(
     @ApplicationContext val context: Context,
-    private val ftpClientCacheFactory: FTPClientCache.Factory
+    val transferredFileDao: TransferredFileDao
 ) {
     private val _serverFTPMap = MutableStateFlow<Map<String, FTPClientCache>>(mapOf())
     val serverFTPMap = _serverFTPMap
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val downloadFTPSet = _serverFTPMap.map { map ->
+        Log.d("TTTest", "Client: Map changed")
         map.values.map { it.downloadQueue }
     }.flatMapLatest {
+        Log.d("TTTest", "Client")
+
         combine(it) { sets ->
             sets.flatMap { it }.toSet()
         }
@@ -43,36 +49,19 @@ class FTPServerPool @Inject constructor(
         }
     }
 
-    fun getAllCache(): List<FTPClientCache> {
-        return _serverFTPMap.value.values.toList()
-    }
-
     fun getCacheByHost(host: String): FTPClientCache? {
         return _serverFTPMap.value[host]
     }
 
-    fun putCacheByHost(host: String, ftpClient: CoreFTPClient) {
-        _serverFTPMap.update { map ->
-            map.toMutableMap().apply {
-                put(host, ftpClientCacheFactory.create(ftpClient))
-                println("Put Cache ByHost")
-            }
-        }
-    }
-
-    fun initNewCache(
-        host: String,
-        port: Int,
-        user: String,
-        password: String
+    suspend fun initNewCache(
+        config: FTPConfig
     ): Boolean {
-        val createNewClient =
-            createNewClient(host, port, user, password)
-        val ftpClientCache = ftpClientCacheFactory.create(createNewClient)
-        if (createNewClient.initClient() && ftpClientCache.thumbnailFTPClient.initClient()) {
+
+        val ftpClientCache = FTPClientCache(config, context, transferredFileDao)
+        if (ftpClientCache.coreFTPClient.initClient() && ftpClientCache.thumbnailFTPClient.initClient()) {
             _serverFTPMap.update { map ->
                 map.toMutableMap().apply {
-                    put(host, ftpClientCache)
+                    put(config.host, ftpClientCache)
                 }
             }
             return true
@@ -80,36 +69,15 @@ class FTPServerPool @Inject constructor(
         return false
     }
 
-    fun createNewClient(
-        host: String,
-        port: Int,
-        user: String,
-        password: String
-    ): CoreFTPClient {
-        return CoreFTPClient(
-            host,
-            port,
-            user,
-            password,
-            context
-        )
-    }
-
-
     suspend fun testHostServerConnectivity(
-        host: String,
-        passwd: String,
-        user: String,
-        port: Int,
+        config: FTPConfig
     ): Boolean {
         val ftpClient =
-            BaseFTPClient(
-                host,
-                port,
-                user,
-                passwd,
-                context
-            )
+            if (config.isSFTP) {
+                SFTPBaseClient(config)
+            } else {
+                BaseFTPClient(config)
+            }
         val res = ftpClient.initClient()
         ftpClient.close()
         return res

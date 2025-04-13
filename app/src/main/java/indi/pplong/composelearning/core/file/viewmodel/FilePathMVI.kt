@@ -11,7 +11,6 @@ import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.model.FileSelectStatus
 import indi.pplong.composelearning.core.file.ui.FileSortType
 import indi.pplong.composelearning.core.file.ui.FileSortTypeMode
-import indi.pplong.composelearning.core.load.model.TransferringFile
 
 /**
  * Description:
@@ -54,7 +53,7 @@ sealed class FilePathUiIntent : UiIntent {
         data class SelectFileMode(val select: Boolean) : AppBar()
         data object OnDownloadButtonClick : AppBar()
 
-        data class Upload(val transferringFile: TransferringFile, val uri: Uri) :
+        data class Upload(val localUri: Uri, val remotePath: String) :
             AppBar()
 
         data object ClickCreateDirIcon : AppBar()

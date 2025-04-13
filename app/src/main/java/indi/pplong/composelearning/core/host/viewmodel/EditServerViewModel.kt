@@ -7,6 +7,7 @@ import indi.pplong.composelearning.core.base.state.ConfigureState
 import indi.pplong.composelearning.core.base.state.EditState
 import indi.pplong.composelearning.core.host.model.ConnectivityTestState
 import indi.pplong.composelearning.core.host.model.ServerItemInfo
+import indi.pplong.composelearning.core.host.model.toFTPConfig
 import indi.pplong.composelearning.core.host.model.toItem
 import indi.pplong.composelearning.core.host.repo.ServerItemRepository
 import org.apache.commons.net.ftp.FTP
@@ -32,14 +33,11 @@ class EditServerViewModel @Inject constructor(
     }
 
     private fun testConnectivity() {
+        setState { copy(state = ConnectivityTestState.TESTING) }
         launchOnIO {
-            setState { copy(state = ConnectivityTestState.TESTING) }
             val isSuccess =
                 globalViewModel.pool.testHostServerConnectivity(
-                    uiState.value.host.host,
-                    uiState.value.host.password,
-                    uiState.value.host.user,
-                    uiState.value.host.port
+                    uiState.value.host.toFTPConfig()
                 )
             setState { copy(state = if (isSuccess) ConnectivityTestState.SUCCESS else ConnectivityTestState.FAIL) }
         }
@@ -81,7 +79,14 @@ class EditServerViewModel @Inject constructor(
     }
 
     private fun changeAndCheckHostInfo(host: ServerItemInfo) {
-        setState { copy(host = host, state = ConnectivityTestState.INITIAL) }
+        val hostCopy =
+            if (host.isSFTP && host.port == FTP.DEFAULT_PORT) {
+                host.copy(port = 22)
+            } else if (!host.isSFTP && host.port == 22) {
+                host.copy(port = FTP.DEFAULT_PORT)
+            } else {
+                host.copy()
+            }
+        setState { copy(host = hostCopy, state = ConnectivityTestState.INITIAL) }
     }
-
 }

@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.core.load.viewmodel.TransferUiIntent
@@ -133,7 +132,7 @@ fun TransferScreen() {
 
 @Composable
 fun DownloadList(
-    downloadFileList: List<FileItemInfo>,
+    downloadFileList: List<TransferringFile>,
     alreadyDownloadedList: List<TransferredFileItem>
 ) {
 

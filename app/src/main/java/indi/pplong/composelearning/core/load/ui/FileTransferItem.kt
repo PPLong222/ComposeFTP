@@ -25,7 +25,6 @@ import androidx.core.net.toUri
 import indi.pplong.composelearning.R
 import indi.pplong.composelearning.core.base.ui.LocalFileAsyncImage
 import indi.pplong.composelearning.core.cache.TransferStatus
-import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.file.ui.CommonListItem
 import indi.pplong.composelearning.core.load.model.TransferringFile
@@ -42,7 +41,7 @@ import indi.pplong.composelearning.core.util.openFileWithUri
 
 @Composable
 fun FileDownloadingItem(
-    fileItemInfo: FileItemInfo
+    fileItemInfo: TransferringFile
 ) {
     Row(
         Modifier
@@ -54,7 +53,10 @@ fun FileDownloadingItem(
         Icon(painterResource(R.drawable.ic_description), null, modifier = Modifier.size(40.dp))
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.padding(end = 16.dp)) {
-            Text(fileItemInfo.name, style = MaterialTheme.typography.titleSmall)
+            Text(
+                fileItemInfo.transferredFileItem.remoteName,
+                style = MaterialTheme.typography.titleSmall
+            )
             if (fileItemInfo.transferStatus is TransferStatus.Transferring) {
                 Row {
                     Text(
@@ -63,9 +65,9 @@ fun FileDownloadingItem(
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
-                        "${FileUtil.getFileSize((fileItemInfo.transferStatus.value * fileItemInfo.size).toLong())} / ${
+                        "${FileUtil.getFileSize((fileItemInfo.transferStatus.value * fileItemInfo.transferredFileItem.size).toLong())} / ${
                             FileUtil.getFileSize(
-                                fileItemInfo.size
+                                fileItemInfo.transferredFileItem.size
                             )
                         }",
                         style = MaterialTheme.typography.labelSmall
@@ -180,13 +182,7 @@ fun FileTransferredItem(
 @Preview
 fun PreviewFileLoadItem() {
     FileDownloadingItem(
-        FileItemInfo(
-            name = "File",
-            transferStatus = TransferStatus.Transferring(
-                0.8F,
-                1024 * 1024 * 3
-            )
-        )
+        TransferringFile()
     )
 }
 

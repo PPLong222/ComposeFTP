@@ -14,7 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -22,10 +21,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.toRoute
 import indi.pplong.composelearning.core.file.ui.BrowsePage
 import indi.pplong.composelearning.core.host.ui.HostPageRoute
 import indi.pplong.composelearning.core.host.viewmodel.HostsViewModel
 import indi.pplong.composelearning.core.load.ui.TransferScreen
+import kotlinx.serialization.Serializable
 
 /**
  * Description:
@@ -40,6 +41,9 @@ enum class BasicBottomNavItem(val route: String, val icon: ImageVector, val labe
     ),
     Download("transfer", Icons.Default.KeyboardArrowUp, "Transfer"),
 }
+
+@Serializable
+data class BrowserScreenNav(val host: String)
 
 @Composable
 fun CommonBottomNavigationBar(navController: NavController) {
@@ -71,7 +75,6 @@ fun CommonBottomNavigationBar(navController: NavController) {
 @Composable
 fun CommonNavigationHost(navController: NavHostController, modifier: Modifier) {
     val mainViewModel: HostsViewModel = hiltViewModel()
-    val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
     NavHost(
         navController = navController,
         startDestination = BasicBottomNavItem.Hosts.route,
@@ -86,10 +89,11 @@ fun CommonNavigationHost(navController: NavHostController, modifier: Modifier) {
             )
         }
 
-        composable(BasicBottomNavItem.Server.route) {
+        composable<BrowserScreenNav> { backStackEntry ->
+            val navParam = backStackEntry.toRoute<BrowserScreenNav>()
             BrowsePage(
                 navController,
-                uiState.connectedServer?.host ?: ""
+                navParam.host
             )
         }
         composable(BasicBottomNavItem.Download.route) { TransferScreen() }

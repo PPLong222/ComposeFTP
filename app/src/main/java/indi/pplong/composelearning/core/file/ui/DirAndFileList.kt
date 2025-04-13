@@ -255,6 +255,7 @@ fun CommonFileItem(
                 )
             }
     ) {
+        Log.d("123123", "CommonFileItem: ${fileInfo.timeStamp}")
         Box {
             CommonListItem(
                 leadingContent = {

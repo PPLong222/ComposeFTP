@@ -13,9 +13,7 @@ import indi.pplong.composelearning.core.host.model.ServerItemInfo
  */
 data class ServerUiState(
     val serverList: List<ServerItemInfo> = arrayListOf(),
-    val listLoadingState: LoadingState? = null,
-    val connectedState: LoadingState? = null,
-    val connectedServer: ServerItemInfo? = null,
+    val listLoadingState: LoadingState? = null
 ) : UiState
 
 sealed class ServerUiIntent : UiIntent {
@@ -24,6 +22,6 @@ sealed class ServerUiIntent : UiIntent {
 }
 
 sealed class ServerUiEffect : UiEffect {
-    data object NavigateToFilePage : ServerUiEffect()
+    data class NavigateToFilePage(val host: String) : ServerUiEffect()
 }
 

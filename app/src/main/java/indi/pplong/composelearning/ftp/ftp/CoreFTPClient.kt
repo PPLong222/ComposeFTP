@@ -1,8 +1,12 @@
-package indi.pplong.composelearning.ftp.clients
+package indi.pplong.composelearning.ftp.ftp
 
 import android.content.Context
 import android.util.Log
-import indi.pplong.composelearning.ftp.BaseFTPClient
+import indi.pplong.composelearning.ftp.FTPConfig
+import indi.pplong.composelearning.ftp.PoolContext
+import indi.pplong.composelearning.ftp.base.ICoreFTPClient
+import indi.pplong.composelearning.ftp.base.IThumbnailFTPClient
+import indi.pplong.composelearning.ftp.base.ITransferFTPClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -18,16 +22,13 @@ import java.time.Duration
  * @date 11/4/24 3:25 PM
  */
 class CoreFTPClient(
-    host: String,
-    port: Int?,
-    username: String,
-    password: String,
-    context: Context
-) : BaseFTPClient(host, port, username, password, context) {
+    config: FTPConfig,
+    val context: Context
+) : BaseFTPClient(config), ICoreFTPClient {
 
     private val TAG = javaClass.name
 
-    suspend fun createDirectory(dirName: String): Boolean {
+    override suspend fun createDirectory(dirName: String): Boolean {
         return try {
             mutex.withLock { ftpClient.makeDirectory(dirName) }
         } catch (_: Exception) {
@@ -35,7 +36,7 @@ class CoreFTPClient(
         }
     }
 
-    suspend fun deleteDirectory(pathName: List<String>): Boolean {
+    override suspend fun deleteDirectory(pathName: List<String>): Boolean {
         return try {
             mutex.withLock {
                 pathName.forEach { fileName ->
@@ -49,7 +50,7 @@ class CoreFTPClient(
     }
 
     // Only in core client
-    suspend fun deleteFile(pathName: List<String>): Boolean {
+    override suspend fun deleteFile(pathName: List<String>): Boolean {
         return try {
             pathName.forEach { fileName ->
                 mutex.withLock {
@@ -62,17 +63,19 @@ class CoreFTPClient(
         }
     }
 
-    suspend fun renameFile(originalName: String, newName: String): Boolean {
+    override fun createThumbnailClient(): IThumbnailFTPClient {
+        return ThumbnailFTPClient(config, context)
+    }
+
+    override fun createTransferFTPClient(
+        poolContext: PoolContext,
+        context: Context
+    ): ITransferFTPClient {
+        return TransferFTPClient(config, poolContext, context)
+    }
+
+    override suspend fun renameFile(originalName: String, newName: String): Boolean {
         return mutex.withLock { ftpClient.rename(originalName, newName) }
-    }
-
-    suspend fun moveFile(originalPath: String, targetPath: String): Boolean {
-        Log.d(TAG, "moveFile: originPath: $originalPath -- targetPath:  $targetPath ")
-        return mutex.withLock { ftpClient.rename(originalPath, targetPath) }
-    }
-
-    fun createThumbnailClient(): ThumbnailFTPClient {
-        return ThumbnailFTPClient(host, port, username, password, context)
     }
 
     override fun customizeFTPClientSetting() {

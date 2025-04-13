@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -94,6 +95,19 @@ internal fun EditServerBottomSheetContent(
             style = MaterialTheme.typography.titleLarge,
             text = stringResource(R.string.add_a_host),
             modifier = Modifier.padding()
+        )
+
+        Switch(
+            checked = uiState.host.isSFTP,
+            onCheckedChange = { isSFTP ->
+                onIntent(
+                    EditServerIntent.OnChangeHostInfo(
+                        uiState.host.copy(
+                            isSFTP = isSFTP
+                        )
+                    )
+                )
+            }
         )
 
         OutlinedTextField(
