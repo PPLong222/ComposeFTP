@@ -182,6 +182,8 @@ fun HostCard(
                 overflow = TextOverflow.Ellipsis
             )
 
+            Spacer(Modifier.height(16.dp))
+
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "Host: ${serverItemInfo.host}",
@@ -195,6 +197,8 @@ fun HostCard(
                         .size(20.dp)
                 )
             }
+            Spacer(Modifier.height(4.dp))
+
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "User: ${serverItemInfo.user}",
@@ -208,12 +212,14 @@ fun HostCard(
                         .size(20.dp)
                 )
             }
+            Spacer(Modifier.height(8.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = if (serverItemInfo.isSFTP) "SFTP Secured" else "Tradition FTP",
                     style = MaterialTheme.typography.labelLarge,
-                    fontStyle = FontStyle.Italic
+                    fontStyle = FontStyle.Italic,
+                    color = Color(0xFF409343)
                 )
                 Icon(
                     painter = painterResource(if (serverItemInfo.isSFTP) R.drawable.ic_security else R.drawable.ic_security_off),

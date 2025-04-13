@@ -12,9 +12,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -110,19 +108,14 @@ fun HostPage(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
-                    .padding(bottom = 16.dp)
+                    .padding(top = 16.dp, bottom = 16.dp)
             ) {
-                Text(
-                    "Stocks",
-                    style = MaterialTheme.typography.headlineLarge,
-                )
                 Spacer(modifier = Modifier.weight(1f))
 
                 Icon(
                     painter = painterResource(R.drawable.history),
                     contentDescription = null,
-
-                    )
+                )
 
                 Icon(
                     imageVector = Icons.Default.Settings,
