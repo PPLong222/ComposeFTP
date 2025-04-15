@@ -6,6 +6,7 @@ package indi.pplong.composelearning.ftp
  * @date 4/11/25 4:55 PM
  */
 data class FTPConfig(
+    val key: Long,
     val host: String,
     val port: Int?,
     val username: String,

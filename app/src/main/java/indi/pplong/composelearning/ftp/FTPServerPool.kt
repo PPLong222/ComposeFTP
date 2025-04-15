@@ -25,7 +25,7 @@ class FTPServerPool @Inject constructor(
     @ApplicationContext val context: Context,
     val transferredFileDao: TransferredFileDao
 ) {
-    private val _serverFTPMap = MutableStateFlow<Map<String, FTPClientCache>>(mapOf())
+    private val _serverFTPMap = MutableStateFlow<Map<Long, FTPClientCache>>(mapOf())
     val serverFTPMap = _serverFTPMap
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -49,8 +49,8 @@ class FTPServerPool @Inject constructor(
         }
     }
 
-    fun getCacheByHost(host: String): FTPClientCache? {
-        return _serverFTPMap.value[host]
+    fun getCacheByHost(hostKey: Long): FTPClientCache? {
+        return _serverFTPMap.value[hostKey]
     }
 
     suspend fun initNewCache(
@@ -58,10 +58,11 @@ class FTPServerPool @Inject constructor(
     ): Boolean {
 
         val ftpClientCache = FTPClientCache(config, context, transferredFileDao)
+
         if (ftpClientCache.coreFTPClient.initClient() && ftpClientCache.thumbnailFTPClient.initClient()) {
             _serverFTPMap.update { map ->
                 map.toMutableMap().apply {
-                    put(config.host, ftpClientCache)
+                    put(config.key, ftpClientCache)
                 }
             }
             return true

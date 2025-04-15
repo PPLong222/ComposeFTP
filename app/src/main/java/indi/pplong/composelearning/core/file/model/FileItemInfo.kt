@@ -25,8 +25,8 @@ data class FileItemInfo(
     val isSelected: Boolean = false
 )
 
-fun FileItemInfo.getKey(host: String): String {
-    return MD5Utils.digestMD5AsString("$host|$pathPrefix|$name".toByteArray())
+fun FileItemInfo.getKey(hostKey: Long): String {
+    return MD5Utils.digestMD5AsString("${hostKey.toString()}|$pathPrefix|$name".toByteArray())
 }
 
 

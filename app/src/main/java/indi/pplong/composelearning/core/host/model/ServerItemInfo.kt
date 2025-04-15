@@ -8,6 +8,7 @@ import indi.pplong.composelearning.ftp.FTPConfig
  * @date 9/28/24 8:39 PM
  */
 data class ServerItemInfo(
+    val id: Long = 0L,
     val host: String = "",
     val password: String = "",
     val user: String = "",
@@ -20,15 +21,15 @@ data class ServerItemInfo(
 )
 
 fun ServerItem.toItemInfo(): ServerItemInfo = ServerItemInfo(
-    host, password, user, port, nickname, lastConnectedTime, isSFTP, downloadDir = downloadDir
+    id, host, password, user, port, nickname, lastConnectedTime, isSFTP, downloadDir = downloadDir
 )
 
 fun ServerItemInfo.toItem(): ServerItem = ServerItem(
-    host, password, user, port, nickname, lastConnectedTime, isSFTP, downloadDir
+    id, host, password, user, port, nickname, lastConnectedTime, isSFTP, downloadDir
 )
 
 fun ServerItemInfo.toFTPConfig(): FTPConfig = FTPConfig(
-    host, port, user, password, isSFTP, downloadDir
+    id, host, port, user, password, isSFTP, downloadDir
 )
 
 enum class ConnectivityTestState {

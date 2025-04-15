@@ -1,8 +1,14 @@
 package indi.pplong.composelearning.core.file.ui
 
 import android.Manifest
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.net.Uri
 import android.os.Build
+import android.os.IBinder
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -51,11 +57,13 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import indi.pplong.composelearning.R
 import indi.pplong.composelearning.core.base.state.LoadingState
+import indi.pplong.composelearning.core.file.model.CommonFileInfo
 import indi.pplong.composelearning.core.file.model.FileSelectStatus
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiEffect
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiIntent
 import indi.pplong.composelearning.core.file.viewmodel.FilePathViewModel
 import indi.pplong.composelearning.core.load.ui.TransferBottomSheet
+import indi.pplong.composelearning.core.load.ui.TransferForegroundService
 import indi.pplong.composelearning.core.util.PermissionUtils
 import indi.pplong.composelearning.sys.ui.sys.widgets.CommonTopBar
 import kotlinx.coroutines.launch
@@ -68,14 +76,16 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Preview
 fun BrowsePage(
     navController: NavController = rememberNavController(),
-    host: String = "",
+    nickname: String = "",
+    hostKey: Long = 0L,
 ) {
     val viewModel: FilePathViewModel =
         hiltViewModel<FilePathViewModel, FilePathViewModel.FilePathViewModelFactory>(
             creationCallback = { factory ->
-                factory.create(host)
+                factory.create(hostKey)
             }
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -83,6 +93,24 @@ fun BrowsePage(
     var showRenameDialog by remember { mutableStateOf(false) }
     var renamedOriginalFileName by remember { mutableStateOf("") }
     val context = LocalContext.current
+    var binder by remember { mutableStateOf<TransferForegroundService.TransferBinder?>(null) }
+    val transferServiceConn = remember {
+        object : ServiceConnection {
+            override fun onServiceConnected(
+                name: ComponentName?,
+                service: IBinder?
+            ) {
+                Log.d("123123", "onServiceConnected: service conttect")
+                binder = service as? TransferForegroundService.TransferBinder
+            }
+
+            override fun onServiceDisconnected(name: ComponentName?) {
+                binder = null
+            }
+
+        }
+    }
+
     val openDirectoryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -183,6 +211,24 @@ fun BrowsePage(
                     showRenameDialog = true
                     renamedOriginalFileName = effect.name
                 }
+
+                is FilePathUiEffect.LaunchTransferService -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        startTransferService(
+                            context,
+                            transferServiceConn,
+                            hostKey,
+                            effect.downloadFileList,
+                            effect.uploadFileList
+                        )
+
+                        binder?.addTransferTask(
+                            hostKey,
+                            effect.downloadFileList,
+                            effect.uploadFileList
+                        )
+                    }
+                }
             }
         }
     }
@@ -193,7 +239,7 @@ fun BrowsePage(
         topBar = {
             CommonTopBar(
                 hasSelect = uiState.appBarStatus == FileSelectStatus.Multiple,
-                host = host,
+                host = nickname,
                 onClickSelect = {
                     viewModel.sendIntent(
                         FilePathUiIntent.AppBar.SelectFileMode(
@@ -379,4 +425,22 @@ fun EmptyFolderTip() {
             style = MaterialTheme.typography.headlineSmall
         )
     }
+}
+
+
+fun startTransferService(
+    context: Context, connection: ServiceConnection,
+    hostKey: Long,
+    downloadList: List<CommonFileInfo>, uploadFileList: List<CommonFileInfo>
+) {
+    Intent(context, TransferForegroundService::class.java).apply {
+        putExtra("host_key", hostKey)
+        putParcelableArrayListExtra("download_list", ArrayList(downloadList))
+        putParcelableArrayListExtra("upload_list", ArrayList(uploadFileList))
+
+        context.startForegroundService(this)
+        context.bindService(this, connection, Context.BIND_AUTO_CREATE)
+
+    }
+
 }

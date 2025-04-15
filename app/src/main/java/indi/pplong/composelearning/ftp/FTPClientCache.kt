@@ -6,11 +6,8 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import indi.pplong.composelearning.core.file.model.CommonFileInfo
-import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.model.TransferredFileDao
-import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.file.model.toTransferredFileItem
-import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.ftp.base.ICoreFTPClient
 import indi.pplong.composelearning.ftp.base.IThumbnailFTPClient
 import indi.pplong.composelearning.ftp.base.ITransferFTPClient
@@ -103,35 +100,36 @@ class FTPClientCache(
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
-    suspend fun downloadFile(fileInfo: FileItemInfo) {
+    suspend fun downloadFile(fileInfo: CommonFileInfo) {
         Log.d("123123", "downloadFile: Trye get FTRP")
         getAvailableTransferFTPClient()?.let { client ->
-            client.changePath(fileInfo.pathPrefix)
-            val uri = FileUtil.getContentUriInDownloadDir(context, fileInfo.name)
+            client.changePath(fileInfo.path)
+            val transferFile = fileInfo.toTransferredFileItem(config.key, 0)
             client.download(
-                fileInfo.toTransferredFileItem(config.host, 0, uri.toString()), onSuccess = {
+                transferFile, onSuccess = {
                     transferredFileDao.insert(
-                        fileInfo.toTransferredFileItem(
-                            config.host,
-                            transferType = 0,
-                            localUri = uri.toString()
-                        ).copy(
+                        transferFile.copy(
                             timeMills = System.currentTimeMillis()
                         )
                     )
-                })
+                }
+            )
         }
     }
 
-    suspend fun uploadFile(transferringFile: TransferredFileItem) {
+    suspend fun uploadFile(commonFileInfo: CommonFileInfo) {
         getAvailableTransferFTPClient()?.let { client ->
-            client.changePath(transferringFile.remotePathPrefix)
+            client.changePath(commonFileInfo.path)
+            val transferFile = commonFileInfo.toTransferredFileItem(config.key, 1)
             client.upload(
-                transferringFile.copy(serverHost = config.host), onSuccess = {
+                transferFile, onSuccess = {
                     transferredFileDao.insert(
-                        transferringFile
+                        transferFile.copy(
+                            timeMills = System.currentTimeMillis()
+                        )
                     )
-                })
+                }
+            )
         }
     }
 

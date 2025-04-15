@@ -10,6 +10,7 @@ import indi.pplong.composelearning.core.base.mvi.BaseViewModel
 import indi.pplong.composelearning.core.cache.GlobalCacheList
 import indi.pplong.composelearning.core.file.model.TransferredFileDao
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
+import indi.pplong.composelearning.core.file.model.getKey
 import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.core.util.MD5Utils
 import indi.pplong.composelearning.core.util.getContentUri
@@ -126,8 +127,9 @@ class TransferViewModel @Inject constructor(
 
     fun saveFileToLocal(context: Context, transferredFileItem: TransferredFileItem) {
         launchOnIO {
+            // TODO fix md5 issues here
             val key =
-                MD5Utils.digestMD5AsString((transferredFileItem.serverHost + transferredFileItem.remotePathPrefix + transferredFileItem.remoteName + transferredFileItem.timeMills).toByteArray())
+                transferredFileItem.getKey(transferredFileItem.serverKey)
             val file = File(context.cacheDir, key)
             context.contentResolver.openInputStream(transferredFileItem.localUri.toUri())
                 ?.use { inputStream ->

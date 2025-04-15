@@ -195,7 +195,7 @@ fun PreviewFileLoadedItem() {
             remotePathPrefix = "",
             timeMills = 1000L,
             timeZoneId = "1",
-            serverHost = "1231",
+            serverKey = 0,
             transferType = 0,
             size = 1054L,
         )

@@ -60,7 +60,12 @@ fun HostPageRoute(
         hostViewModel.uiEffect.collect { effect ->
             when (effect) {
                 is ServerUiEffect.NavigateToFilePage -> {
-                    navController.navigate(BrowserScreenNav(effect.host)) {
+                    navController.navigate(
+                        BrowserScreenNav(
+                            effect.serverInfo.nickname,
+                            effect.serverInfo.id
+                        )
+                    ) {
                         // Why doing this?
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true

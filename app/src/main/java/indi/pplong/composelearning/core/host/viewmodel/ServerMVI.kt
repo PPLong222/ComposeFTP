@@ -22,6 +22,6 @@ sealed class ServerUiIntent : UiIntent {
 }
 
 sealed class ServerUiEffect : UiEffect {
-    data class NavigateToFilePage(val host: String) : ServerUiEffect()
+    data class NavigateToFilePage(val serverInfo: ServerItemInfo) : ServerUiEffect()
 }
 

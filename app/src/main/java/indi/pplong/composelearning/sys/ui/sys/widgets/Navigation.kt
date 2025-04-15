@@ -43,7 +43,7 @@ enum class BasicBottomNavItem(val route: String, val icon: ImageVector, val labe
 }
 
 @Serializable
-data class BrowserScreenNav(val host: String)
+data class BrowserScreenNav(val nickname: String, val hostKey: Long)
 
 @Composable
 fun CommonBottomNavigationBar(navController: NavController) {
@@ -93,7 +93,8 @@ fun CommonNavigationHost(navController: NavHostController, modifier: Modifier) {
             val navParam = backStackEntry.toRoute<BrowserScreenNav>()
             BrowsePage(
                 navController,
-                navParam.host
+                navParam.nickname,
+                navParam.hostKey
             )
         }
         composable(BasicBottomNavItem.Download.route) { TransferScreen() }

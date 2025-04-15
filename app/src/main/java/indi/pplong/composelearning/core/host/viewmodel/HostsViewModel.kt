@@ -60,7 +60,7 @@ class HostsViewModel @Inject constructor(
         }
     }
 
-    private fun handleNavigate(host: String) {
+    private fun handleNavigate(host: ServerItemInfo) {
         viewModelScope.launch {
             sendEffect {
                 ServerUiEffect.NavigateToFilePage(host)
@@ -78,7 +78,10 @@ class HostsViewModel @Inject constructor(
                 }
             })
         }
-        if (globalViewModel.pool.getCacheByHost(serverItemInfo.host) != null) {
+        if (globalViewModel.pool.getCacheByHost(
+                serverItemInfo.id
+            ) != null
+        ) {
             setState {
                 copy(serverList = serverList.map {
                     if (it == serverItemInfo) {
@@ -88,7 +91,7 @@ class HostsViewModel @Inject constructor(
                     }
                 })
             }
-            handleNavigate(serverItemInfo.host)
+            handleNavigate(serverItemInfo)
         } else {
             launchOnIO {
                 serverItemInfo.apply {
@@ -106,7 +109,7 @@ class HostsViewModel @Inject constructor(
                                 }
                             })
                         }
-                        handleNavigate(serverItemInfo.host)
+                        handleNavigate(serverItemInfo)
                     } else {
                         setState {
                             copy(serverList = serverList.map {

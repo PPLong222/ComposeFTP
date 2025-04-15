@@ -7,10 +7,12 @@ import indi.pplong.composelearning.core.base.mvi.UiIntent
 import indi.pplong.composelearning.core.base.mvi.UiState
 import indi.pplong.composelearning.core.base.state.LoadingState
 import indi.pplong.composelearning.core.base.state.RequestingState
+import indi.pplong.composelearning.core.file.model.CommonFileInfo
 import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.model.FileSelectStatus
 import indi.pplong.composelearning.core.file.ui.FileSortType
 import indi.pplong.composelearning.core.file.ui.FileSortTypeMode
+import indi.pplong.composelearning.core.host.model.ServerItemInfo
 
 /**
  * Description:
@@ -27,7 +29,8 @@ data class FilePathUiState(
     val createDirDialog: CreateDirDialog = CreateDirDialog(),
     val fileSortMode: FileSortTypeMode = FileSortTypeMode(fileSortType = FileSortType.Name, true),
     val showTransferSheet: Boolean = false,
-    val isTransferStatusViewed: Boolean = true
+    val isTransferStatusViewed: Boolean = true,
+    val serverItemInfo: ServerItemInfo = ServerItemInfo()
 ) : UiState
 
 sealed class FilePathUiIntent : UiIntent {
@@ -95,6 +98,10 @@ sealed class FilePathUiEffect : UiEffect {
         val actionLabel: String? = null,
         val withDismissAction: Boolean = false,
         val duration: SnackbarDuration = if (actionLabel == null) SnackbarDuration.Short else SnackbarDuration.Indefinite
+    ) : FilePathUiEffect()
+    data class LaunchTransferService(
+        val downloadFileList: List<CommonFileInfo> = arrayListOf(),
+        val uploadFileList: List<CommonFileInfo> = arrayListOf()
     ) : FilePathUiEffect()
 }
 

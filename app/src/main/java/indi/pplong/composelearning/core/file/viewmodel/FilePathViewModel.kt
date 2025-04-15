@@ -15,16 +15,15 @@ import indi.pplong.composelearning.core.base.mvi.BaseViewModel
 import indi.pplong.composelearning.core.base.state.LoadingState
 import indi.pplong.composelearning.core.cache.GlobalCacheList
 import indi.pplong.composelearning.core.cache.TransferStatus
+import indi.pplong.composelearning.core.file.model.CommonFileInfo
 import indi.pplong.composelearning.core.file.model.FileItemInfo
 import indi.pplong.composelearning.core.file.model.FileSelectStatus
-import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.file.model.getKey
 import indi.pplong.composelearning.core.file.model.toFileItemInfo
 import indi.pplong.composelearning.core.file.ui.FileBottomAppBarAction
 import indi.pplong.composelearning.core.file.ui.FileSortType
 import indi.pplong.composelearning.core.file.ui.FileSortTypeMode
 import indi.pplong.composelearning.core.util.FileUtil
-import indi.pplong.composelearning.core.util.MD5Utils
 import indi.pplong.composelearning.ftp.FTPClientCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -55,7 +54,7 @@ import java.util.Queue
 class FilePathViewModel @AssistedInject constructor(
     private val globalViewModel: GlobalRepository,
     @ApplicationContext val context: Context,
-    @Assisted val host: String
+    @Assisted val hostKey: Long
 ) :
     BaseViewModel<FilePathUiState, FilePathUiIntent, FilePathUiEffect>() {
     private val TAG = javaClass.name
@@ -68,9 +67,10 @@ class FilePathViewModel @AssistedInject constructor(
     private var thumbnailJob: Job? = null
 
     private val signal = Channel<Unit>(Channel.CONFLATED)
+    private val host = globalViewModel.pool.serverFTPMap.value[hostKey]?.config?.host ?: ""
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val downloadFileList = globalViewModel.pool.serverFTPMap.map { it[host] }.filterNotNull()
+    val downloadFileList = globalViewModel.pool.serverFTPMap.map { it[hostKey] }.filterNotNull()
         .flatMapLatest { cache ->
             cache.downloadQueue.flatMapLatest { set ->
                 if (set.isEmpty()) {
@@ -84,25 +84,34 @@ class FilePathViewModel @AssistedInject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val downloadQueueSize =
-        globalViewModel.pool.serverFTPMap.mapNotNull { it["185.211.4.19"] }
+        globalViewModel.pool.serverFTPMap.mapNotNull { it[hostKey] }
             .flatMapLatest { data -> data.downloadQueue.map { it.size } }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val uploadQueueSize =
-        globalViewModel.pool.serverFTPMap.mapNotNull { it["185.211.4.19"] }
+        globalViewModel.pool.serverFTPMap.mapNotNull { it[hostKey] }
             .flatMapLatest { data -> data.uploadQueue.map { it.size } }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val idleQueueSize =
-        globalViewModel.pool.serverFTPMap.mapNotNull { it["185.211.4.19"] }
+        globalViewModel.pool.serverFTPMap.mapNotNull { it[hostKey] }
             .flatMapLatest { data -> data.idledClientsQueue.map { it.size } }
 
     val transferringCount = downloadQueueSize.combine(uploadQueueSize) { a, b -> a + b }
 
 
     init {
-        Log.d(TAG, "Init ViewModfel: $host")
+        Log.d(TAG, "Init ViewModfel: $hostKey")
+        globalViewModel.pool.serverFTPMap.value[hostKey]?.let {
+            cache = it
+            launchOnIO {
+                val currentPath = it.getCurrentPath() ?: "/"
 
+                onPathChanged(currentPath)
+            }
+        } ?: run {
+            throw Exception()
+        }
         launchOnIO {
             transferringCount.drop(1).collect {
                 setState {
@@ -148,12 +157,12 @@ class FilePathViewModel @AssistedInject constructor(
             downloadFileList.collect { downloadList ->
                 val fileList = uiState.value.fileList
                 val map = downloadList.associate {
-                    it.transferredFileItem.getKey(host) to it
+                    it.transferredFileItem.getKey(hostKey) to it
                 }
                 setState {
                     copy(
                         fileList = fileList.map {
-                            val updatedFile = map[it.getKey(host)]
+                            val updatedFile = map[it.getKey(hostKey)]
                             if (updatedFile != null) {
                                 it.copy(transferStatus = updatedFile.transferStatus)
                             } else {
@@ -163,38 +172,6 @@ class FilePathViewModel @AssistedInject constructor(
                     )
                 }
             }
-        }
-        launchOnIO {
-            globalViewModel.pool.serverFTPMap.collect {
-                launch {
-                    it.values.firstOrNull { it.config.host == host }?.let {
-                        cache = it
-                        val currentPath = it.getCurrentPath()
-                        onPathChanged(currentPath ?: "/")
-                        it
-                    }?.downloadQueue?.collect { queue ->
-                        Log.d(TAG, "$queue: download Get")
-                        queue.forEach { client ->
-                            launch {
-//                                Log.d(TAG, "Download Queue Update ${client.toString()}")
-//                                client.transferFileFlow.collect { file ->
-//                                    val index =
-//                                        uiState.value.fileList.indexOfLast { it.pathPrefix == file.pathPrefix && it.name == file.name }
-//                                    Log.d(TAG, "Change File True")
-//                                    takeIf { index >= 0 }?.let {
-//                                        setState {
-//                                            copy(fileList = fileList.toMutableList().apply {
-//                                                set(index, file)
-//                                            })
-//                                        }
-//                                    }
-//                                }
-                            }
-                        }
-                    }
-                }
-            }
-
         }
     }
 
@@ -353,17 +330,15 @@ class FilePathViewModel @AssistedInject constructor(
         val fileSize = FileUtil.getFileSize(context, uri)
         val fileName = FileUtil.getFileName(context, uri)
 
-        val file = TransferredFileItem(
-            remoteName = fileName,
-            remotePathPrefix = remotePath,
+        val file = CommonFileInfo(
+            name = fileName,
+            isDir = false,
+            path = remotePath,
             size = fileSize,
-            transferType = 1,
-            localUri = uri.toString()
+            localUri = uri.toString(),
         )
 
-        launchOnIO {
-            cache.uploadFile(file)
-        }
+        sendEffect { FilePathUiEffect.LaunchTransferService(uploadFileList = listOf(file)) }
     }
 
     private fun onPathChanged(targetPath: String) {
@@ -378,8 +353,9 @@ class FilePathViewModel @AssistedInject constructor(
                 onSuccess = {
                     setState {
                         val convertedList = it.map {
+
                             val key =
-                                MD5Utils.digestMD5AsString((host + targetPath + it.name + it.mtime).toByteArray())
+                                it.getKey(hostKey)
                             it.toFileItemInfo(
                                 targetPath,
                                 key,
@@ -443,8 +419,7 @@ class FilePathViewModel @AssistedInject constructor(
                     copy(
                         loadingState = LoadingState.SUCCESS,
                         fileList = files.map {
-                            val key =
-                                MD5Utils.digestMD5AsString((host + currentPath + it.name + it.mtime).toByteArray())
+                            val key = it.getKey(hostKey)
                             it.toFileItemInfo(
                                 prefix = currentPath ?: "/",
                                 key,
@@ -485,13 +460,24 @@ class FilePathViewModel @AssistedInject constructor(
                 appBarStatus = FileSelectStatus.Single
             )
         }
-
-        val selectedFiles = uiState.value.fileList.filter { it.isSelected }
-        selectedFiles.forEach { file ->
-            viewModelScope.launch(Dispatchers.IO) {
-                cache.downloadFile(file)
-            }
+        val selectedFiles = uiState.value.fileList.filter { it.isSelected }.map {
+            CommonFileInfo(
+                name = it.name,
+                path = it.pathPrefix,
+                isDir = it.isDir,
+                mtime = it.timeStamp,
+                localImageUri = it.localImageUri,
+                size = it.size,
+                user = it.user
+            )
         }
+        sendEffect { FilePathUiEffect.LaunchTransferService(downloadFileList = selectedFiles) }
+
+//        selectedFiles.forEach { file ->
+//            viewModelScope.launch(Dispatchers.IO) {
+//                cache.downloadFile(file)
+//            }
+//        }
     }
 
     private fun createDirectory(dirName: String) {
@@ -562,7 +548,7 @@ class FilePathViewModel @AssistedInject constructor(
 
     @AssistedFactory
     interface FilePathViewModelFactory {
-        fun create(host: String): FilePathViewModel
+        fun create(hostKey: Long): FilePathViewModel
     }
 
     // Maybe it's better to be placed in Compose File

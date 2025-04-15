@@ -18,7 +18,7 @@ data class TransferredFileItem(
     val timeMills: Long = 0,
     val timeZoneId: String = "",
     val size: Long = 0,
-    val serverHost: String = "",
+    val serverKey: Long = 0L,
     /**
      * 0: Download
      * 1: Upload
@@ -28,24 +28,19 @@ data class TransferredFileItem(
     val localImageUri: String = ""
 )
 
-fun TransferredFileItem.getKey(host: String): String {
-    return MD5Utils.digestMD5AsString("$host|$remotePathPrefix|$remoteName".toByteArray())
+fun TransferredFileItem.getKey(hostKey: Long): String {
+    return MD5Utils.digestMD5AsString("$hostKey|$remotePathPrefix|$remoteName".toByteArray())
 }
 
-fun FileItemInfo.toTransferredFileItem(
-    host: String,
-    transferType: Int,
-    localUri: String
-): TransferredFileItem {
+fun CommonFileInfo.toTransferredFileItem(serverKey: Long, transferType: Int): TransferredFileItem {
     return TransferredFileItem(
+        serverKey = serverKey,
         remoteName = name,
-        remotePathPrefix = pathPrefix,
-        timeMills = timeStamp,
+        remotePathPrefix = path,
+        timeMills = mtime,
         size = size,
-        timeZoneId = timeStampZoneId.id,
         transferType = transferType,
         localUri = localUri,
         localImageUri = localImageUri,
-        serverHost = host
     )
 }

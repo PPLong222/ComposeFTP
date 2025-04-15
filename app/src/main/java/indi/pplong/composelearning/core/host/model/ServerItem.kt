@@ -1,6 +1,8 @@
 package indi.pplong.composelearning.core.host.model
 
 import androidx.room.Entity
+import androidx.room.Index
+import androidx.room.PrimaryKey
 
 /**
  * Description:
@@ -9,9 +11,14 @@ import androidx.room.Entity
  */
 @Entity(
     tableName = "server_items",
-    primaryKeys = ["host", "user", "isSFTP"]
+    indices = [
+        Index(value = ["host", "user", "isSFTP"], unique = true),
+        Index(value = ["nickname"], unique = true)
+    ]
 )
 data class ServerItem(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0L,
     val host: String,
     val password: String,
     val user: String,
