@@ -11,6 +11,7 @@ import indi.pplong.composelearning.core.host.model.toFTPConfig
 import indi.pplong.composelearning.core.host.model.toItem
 import indi.pplong.composelearning.core.host.repo.ServerItemRepository
 import org.apache.commons.net.ftp.FTP
+import org.apache.commons.net.ftp.FTPClient
 import javax.inject.Inject
 
 /**
@@ -78,15 +79,18 @@ class EditServerViewModel @Inject constructor(
         }
     }
 
-    private fun changeAndCheckHostInfo(host: ServerItemInfo) {
-        val hostCopy =
-            if (host.isSFTP && host.port == FTP.DEFAULT_PORT) {
-                host.copy(port = 22)
-            } else if (!host.isSFTP && host.port == 22) {
-                host.copy(port = FTP.DEFAULT_PORT)
+    private fun changeAndCheckHostInfo(updatedHost: ServerItemInfo) {
+        setState {
+            val hostCopy = if (updatedHost.isSFTP != host.isSFTP) {
+                if (updatedHost.isSFTP) {
+                    updatedHost.copy(port = 22)
+                } else {
+                    updatedHost.copy(port = FTPClient.DEFAULT_PORT)
+                }
             } else {
-                host.copy()
+                updatedHost.copy()
             }
-        setState { copy(host = hostCopy, state = ConnectivityTestState.INITIAL) }
+            copy(host = hostCopy, state = ConnectivityTestState.INITIAL)
+        }
     }
 }

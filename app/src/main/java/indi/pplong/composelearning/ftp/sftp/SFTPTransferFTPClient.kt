@@ -1,10 +1,12 @@
 package indi.pplong.composelearning.ftp.sftp
 
+import android.content.Context
 import android.util.Log
 import androidx.core.net.toUri
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.load.model.TransferringFile
+import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.ftp.FTPConfig
 import indi.pplong.composelearning.ftp.PoolContext
 import indi.pplong.composelearning.ftp.base.ITransferFTPClient
@@ -13,9 +15,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import net.schmizz.sshj.common.StreamCopier
-import net.schmizz.sshj.xfer.FileSystemFile
 import net.schmizz.sshj.xfer.TransferListener
-import java.io.File
 import java.text.DecimalFormat
 
 /**
@@ -24,7 +24,8 @@ import java.text.DecimalFormat
  */
 class SFTPTransferFTPClient(
     config: FTPConfig,
-    val cacheContext: PoolContext
+    val cacheContext: PoolContext,
+    val context: Context
 ) : SFTPBaseClient(config), ITransferFTPClient {
 
     private val progressFlow = MutableStateFlow<TransferringFile>(TransferringFile())
@@ -46,16 +47,25 @@ class SFTPTransferFTPClient(
 
 
         try {
-            val localFile = File(file.localUri.toUri().path)
-            val dest = FileSystemFile(localFile)
             cacheContext.addToDownloadList(this)
-            sftp.fileTransfer.download(file.remotePathPrefix + "/" + file.remoteName, dest)
+            val uri = if (config.downloadDir != null) {
+                FileUtil.getTargetFileContentUriFromDir(
+                    context,
+                    config.downloadDir.toUri(),
+                    file.remoteName
+                )
+            } else {
+                FileUtil.getContentUriInDownloadDir(context, file.remoteName)
+            }
+            sftp.fileTransfer.download(
+                file.remotePathPrefix + "/" + file.remoteName,
+                OutputStreamDestFile(context, uri)
+            )
             progressFlow.update {
                 it.copy(transferStatus = TransferStatus.Successful)
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Log.d("123123", "download: e${e.stackTrace}")
             progressFlow.update {
                 it.copy(transferStatus = TransferStatus.Failed)
             }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,7 +29,8 @@ import indi.pplong.composelearning.R
 fun PasswordTextField(
     modifier: Modifier = Modifier,
     text: String = "",
-    onValueChange: (String) -> Unit = {}
+    onValueChange: (String) -> Unit = {},
+    labelString: String = ""
 ) {
     var showPassword by remember { mutableStateOf(false) }
     OutlinedTextField(
@@ -40,6 +42,7 @@ fun PasswordTextField(
             imeAction = ImeAction.Done
         ),
         modifier = modifier,
+        label = { Text(labelString) },
         trailingIcon = {
             Box(modifier = Modifier.clickable {
                 showPassword = showPassword.not()

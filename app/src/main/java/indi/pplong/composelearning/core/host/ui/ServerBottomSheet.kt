@@ -1,10 +1,18 @@
 package indi.pplong.composelearning.core.host.ui
 
+import android.content.Intent
+import android.os.Environment
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,9 +20,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,12 +37,24 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import indi.pplong.composelearning.R
 import indi.pplong.composelearning.core.base.state.ConfigureState
 import indi.pplong.composelearning.core.base.state.EditState
@@ -43,6 +64,7 @@ import indi.pplong.composelearning.core.host.viewmodel.EditServerIntent
 import indi.pplong.composelearning.core.host.viewmodel.EditServerUiState
 import indi.pplong.composelearning.core.util.ServerPortInfo
 import indi.pplong.composelearning.sys.ui.theme.ComposeLearningTheme
+import kotlinx.coroutines.launch
 
 /**
  * Description:
@@ -90,165 +112,246 @@ internal fun EditServerBottomSheetContent(
     uiState: EditServerUiState = EditServerUiState(),
     onIntent: (EditServerIntent) -> Unit = {}
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            style = MaterialTheme.typography.titleLarge,
-            text = stringResource(R.string.add_a_host),
-            modifier = Modifier.padding()
-        )
+    val animatedProgress = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
 
-        Switch(
-            checked = uiState.host.isSFTP,
-            onCheckedChange = { isSFTP ->
-                onIntent(
-                    EditServerIntent.OnChangeHostInfo(
-                        uiState.host.copy(
-                            isSFTP = isSFTP
+    LaunchedEffect(Unit) {
+//        animatedProgress.animateTo(
+//            targetValue = 1f,
+//            animationSpec = tween(durationMillis = 2000, easing = LinearEasing)
+//        )
+    }
+
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(Color(0xFFFFF59D))
+        )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer {
+                    scaleX = animatedProgress.value
+                    scaleY = animatedProgress.value
+                    transformOrigin = TransformOrigin(0f, 1f) // 左下角放大
+                }
+                .background(Color(0xFF4CAF50), shape = RoundedCornerShape(topEnd = 32.dp))
+                .zIndex(1f)
+        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 12.dp)
+                .zIndex(2F)
+        ) {
+
+            Text(
+                style = MaterialTheme.typography.titleLarge,
+                text = stringResource(R.string.add_a_host),
+                modifier = Modifier.padding()
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Using SFTP")
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = null,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Switch(
+                    checked = uiState.host.isSFTP,
+                    onCheckedChange = { isSFTP ->
+                        scope.launch {
+                            animatedProgress.animateTo(
+                                targetValue = if (isSFTP) 1F else 0F,
+                                animationSpec = tween(durationMillis = 200, easing = LinearEasing)
+                            )
+                        }
+
+                        onIntent(
+                            EditServerIntent.OnChangeHostInfo(
+                                uiState.host.copy(
+                                    isSFTP = isSFTP
+                                )
+                            )
                         )
-                    )
+                    },
                 )
             }
-        )
 
-        OutlinedTextField(
-            value = uiState.host.host,
-            onValueChange = { onIntent(EditServerIntent.OnChangeHostInfo(uiState.host.copy(host = it))) },
-            label = { Text(stringResource(R.string.host)) },
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth()
-        )
 
-        PasswordTextField(
-            text = uiState.host.password,
-            onValueChange = {
-                onIntent(
-                    EditServerIntent.OnChangeHostInfo(
-                        uiState.host.copy(
-                            password = it
+            OutlinedTextField(
+                value = uiState.host.host,
+                onValueChange = { onIntent(EditServerIntent.OnChangeHostInfo(uiState.host.copy(host = it))) },
+                label = { Text(stringResource(R.string.host)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+            )
+            Spacer(Modifier.height(12.dp))
+            PasswordTextField(
+                text = uiState.host.password,
+                onValueChange = {
+                    onIntent(
+                        EditServerIntent.OnChangeHostInfo(
+                            uiState.host.copy(
+                                password = it
+                            )
                         )
                     )
-                )
-            },
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth()
-        )
-        Row {
-            OutlinedTextField(
-                value = uiState.host.user,
-                onValueChange = { onIntent(EditServerIntent.OnChangeHostInfo(uiState.host.copy(user = it))) },
-                label = { Text(stringResource(R.string.user)) },
-                modifier = Modifier
-                    .padding(12.dp)
-                    .weight(0.7f),
-                supportingText = {
-                    Text("123")
-                }
-            )
-            OutlinedTextField(
-                value = uiState.host.port.toString(),
-                onValueChange = { portStr ->
-                    val newPort = portStr.toIntOrNull()
-                        ?.coerceIn(ServerPortInfo.MIN_PORT, ServerPortInfo.MAX_PORT)
-                        ?: 0
-                    onIntent(EditServerIntent.OnChangeHostInfo(uiState.host.copy(port = newPort)))
                 },
-                label = { Text(stringResource(R.string.port)) },
+                labelString = "Password",
                 modifier = Modifier
-                    .padding(12.dp)
-                    .weight(0.3f),
-                supportingText = {
-                    Text("${ServerPortInfo.MIN_PORT}-${ServerPortInfo.MAX_PORT}")
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number
-                ),
-                singleLine = true
+                    .fillMaxWidth()
             )
-        }
-
-        AnimatedContent(
-            targetState = uiState.state,
-            transitionSpec = {
-                fadeIn(
-                    animationSpec = tween(1000)
-                ) togetherWith fadeOut(animationSpec = tween(400))
-            },
-            label = "",
-        ) { targetState ->
-            when (targetState) {
-                ConnectivityTestState.FAIL -> {
-                    // TODO: tips of multiple kinds
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            stringResource(R.string.network_error_tip),
-                            color = MaterialTheme.colorScheme.error
+            Spacer(Modifier.height(12.dp))
+            Row {
+                OutlinedTextField(
+                    value = uiState.host.user,
+                    onValueChange = {
+                        onIntent(
+                            EditServerIntent.OnChangeHostInfo(
+                                uiState.host.copy(
+                                    user = it
+                                )
+                            )
                         )
+                    },
+                    label = { Text(stringResource(R.string.user)) },
+                    modifier = Modifier
+                        .weight(0.7f)
+                )
+                OutlinedTextField(
+                    value = uiState.host.port.toString(),
+                    onValueChange = { portStr ->
+                        val newPort = portStr.toIntOrNull()
+                            ?.coerceIn(ServerPortInfo.MIN_PORT, ServerPortInfo.MAX_PORT)
+                            ?: 0
+                        onIntent(EditServerIntent.OnChangeHostInfo(uiState.host.copy(port = newPort)))
+                    },
+                    label = { Text(stringResource(R.string.port)) },
+                    modifier = Modifier
+                        .padding(start = 16.dp)
+                        .weight(0.3f),
+                    supportingText = {
+                        Text("${ServerPortInfo.MIN_PORT}-${ServerPortInfo.MAX_PORT}")
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number
+                    ),
+                    singleLine = true
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            AnimatedContent(
+                targetState = uiState.state,
+                transitionSpec = {
+                    fadeIn(
+                        animationSpec = tween(1000)
+                    ) togetherWith fadeOut(animationSpec = tween(400))
+                },
+                label = "",
+            ) { targetState ->
+                when (targetState) {
+                    ConnectivityTestState.FAIL -> {
+                        // TODO: tips of multiple kinds
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                stringResource(R.string.network_error_tip),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Button(
+                                onClick = { onIntent(EditServerIntent.TestConnectivity) },
+                            ) {
+                                Text(stringResource(R.string.test_again))
+                            }
+                        }
+
+                    }
+
+                    ConnectivityTestState.INITIAL ->
                         Button(
                             onClick = { onIntent(EditServerIntent.TestConnectivity) },
-                            modifier = Modifier.padding(12.dp)
                         ) {
-                            Text(stringResource(R.string.test_again))
+                            Text(stringResource(R.string.test_connectivity))
                         }
-                    }
-
-                }
-
-                ConnectivityTestState.INITIAL ->
-                    Button(
-                        onClick = { onIntent(EditServerIntent.TestConnectivity) },
-                        modifier = Modifier.padding(12.dp)
-                    ) {
-                        Text(stringResource(R.string.test_connectivity))
-                    }
 
 
-                ConnectivityTestState.TESTING ->
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .width(32.dp)
-                            .padding(top = 12.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
+                    ConnectivityTestState.TESTING ->
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .width(32.dp)
+                                .padding(top = 12.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
 
-                ConnectivityTestState.SUCCESS -> {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Row {
-                            Icon(
-                                Icons.Filled.ThumbUp,
-                                null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                stringResource(R.string.congratulations),
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        Button(
-                            onClick = { onIntent(EditServerIntent.NextToConfigure) },
-                            modifier = Modifier.padding(12.dp)
-                        ) {
-                            Text(stringResource(R.string.next))
+                    ConnectivityTestState.SUCCESS -> {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row {
+                                Icon(
+                                    Icons.Filled.ThumbUp,
+                                    null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    stringResource(R.string.congratulations),
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Button(
+                                onClick = { onIntent(EditServerIntent.NextToConfigure) },
+                            ) {
+                                Text(stringResource(R.string.next))
+                            }
                         }
                     }
                 }
             }
+
+
         }
-
-
     }
 }
+
 
 @Composable
 fun ConfigureHostInfo(
     uiState: EditServerUiState = EditServerUiState(),
-    onIntent: (EditServerIntent) -> Unit = {}
+    onIntent: (EditServerIntent) -> Unit = {},
 ) {
+    val context = LocalContext.current
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            onIntent(
+                EditServerIntent.OnChangeHostInfo(
+                    uiState.host.copy(
+                        downloadDir = uri.toString()
+                    )
+                )
+            )
+            context.contentResolver.takePersistableUriPermission(
+                it,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        }
+    }
+    var defaultDownloadDir by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        defaultDownloadDir =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                .toString()
+    }
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 12.dp)
     ) {
         Text(
             style = MaterialTheme.typography.titleLarge,
@@ -260,16 +363,33 @@ fun ConfigureHostInfo(
             text = "Pick an Icon",
         )
 
-        LazyColumn { }
 
         OutlinedTextField(
             value = uiState.host.nickname,
             onValueChange = { onIntent(EditServerIntent.OnChangeHostInfo(uiState.host.copy(nickname = it))) },
             label = { Text(stringResource(R.string.nickname)) },
             modifier = Modifier
-                .padding(12.dp)
                 .fillMaxWidth()
         )
+        Spacer(Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Customize download path")
+            Spacer(Modifier.weight(1f))
+            Button(onClick = {
+                launcher.launch(null)
+            }, shape = RoundedCornerShape(size = 8.dp)) {
+                Icon(painter = painterResource(R.drawable.ic_file_open), contentDescription = null)
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                "Path: ${uiState.host.downloadDir ?: defaultDownloadDir}",
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
 
         Button(
             onClick = { onIntent(EditServerIntent.SaveHost) },

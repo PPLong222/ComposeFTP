@@ -64,6 +64,6 @@ class SFTPCoreClient(config: FTPConfig, val context: Context) : SFTPBaseClient(c
         poolContext: PoolContext,
         context: Context
     ): ITransferFTPClient {
-        return SFTPTransferFTPClient(config, poolContext)
+        return SFTPTransferFTPClient(config, poolContext, context)
     }
 }

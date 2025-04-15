@@ -112,4 +112,7 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
+    // File Provider
+    implementation("androidx.documentfile:documentfile:1.0.1")
+
 }

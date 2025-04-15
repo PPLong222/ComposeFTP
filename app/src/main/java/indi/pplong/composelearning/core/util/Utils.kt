@@ -14,9 +14,11 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.MediaStore
 import android.provider.OpenableColumns
+import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import indi.pplong.composelearning.core.base.FileType
 import java.io.File
 import java.text.DecimalFormat
@@ -182,6 +184,24 @@ object FileUtil {
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         val file = File(downloads, fileName)
         return file.toUri()
+    }
+
+    fun getTargetFileContentUriFromDir(
+        context: Context,
+        directorUri: Uri,
+        fileName: String,
+        mimeType: String = "application/octet-stream"
+    ): Uri? {
+        Log.d("123123", "getTargetFileContentUriFromDir: ${directorUri.toString()}")
+        val pickedDir = DocumentFile.fromTreeUri(context, directorUri) ?: return null
+
+        val existingFile = pickedDir.findFile(fileName)
+
+        if (existingFile != null && existingFile.exists()) {
+            return existingFile.uri
+        }
+        val newFile = pickedDir.createFile(mimeType, fileName)
+        return newFile?.uri
     }
 }
 

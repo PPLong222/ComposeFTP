@@ -10,5 +10,6 @@ data class FTPConfig(
     val port: Int?,
     val username: String,
     val password: String,
-    val isSFTP: Boolean = false
+    val isSFTP: Boolean = false,
+    val downloadDir: String? = null
 )

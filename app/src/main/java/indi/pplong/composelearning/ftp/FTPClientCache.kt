@@ -107,11 +107,7 @@ class FTPClientCache(
         Log.d("123123", "downloadFile: Trye get FTRP")
         getAvailableTransferFTPClient()?.let { client ->
             client.changePath(fileInfo.pathPrefix)
-            val uri = if (config.isSFTP) {
-                FileUtil.getFileUriInDownloadDir(context, fileInfo.name)
-            } else {
-                FileUtil.getContentUriInDownloadDir(context, fileInfo.name)
-            }
+            val uri = FileUtil.getContentUriInDownloadDir(context, fileInfo.name)
             client.download(
                 fileInfo.toTransferredFileItem(config.host, 0, uri.toString()), onSuccess = {
                     transferredFileDao.insert(

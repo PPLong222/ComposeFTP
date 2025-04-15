@@ -9,7 +9,7 @@ import androidx.room.Entity
  */
 @Entity(
     tableName = "server_items",
-    primaryKeys = ["host", "user"]
+    primaryKeys = ["host", "user", "isSFTP"]
 )
 data class ServerItem(
     val host: String,
@@ -18,5 +18,6 @@ data class ServerItem(
     val port: Int,
     val nickname: String,
     val lastConnectedTime: Long,
-    val isSFTP: Boolean
+    val isSFTP: Boolean,
+    val downloadDir: String?
 )

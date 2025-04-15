@@ -15,19 +15,20 @@ data class ServerItemInfo(
     val nickname: String = "",
     val lastConnectedTime: Long = 0,
     val isSFTP: Boolean = false,
-    val connectedStatus: ServerConnectionStatus = ServerConnectionStatus.INITIAL
+    val connectedStatus: ServerConnectionStatus = ServerConnectionStatus.INITIAL,
+    val downloadDir: String? = null
 )
 
 fun ServerItem.toItemInfo(): ServerItemInfo = ServerItemInfo(
-    host, password, user, port, nickname, lastConnectedTime, isSFTP
+    host, password, user, port, nickname, lastConnectedTime, isSFTP, downloadDir = downloadDir
 )
 
 fun ServerItemInfo.toItem(): ServerItem = ServerItem(
-    host, password, user, port, nickname, lastConnectedTime, isSFTP
+    host, password, user, port, nickname, lastConnectedTime, isSFTP, downloadDir
 )
 
 fun ServerItemInfo.toFTPConfig(): FTPConfig = FTPConfig(
-    host, port, user, password, isSFTP
+    host, port, user, password, isSFTP, downloadDir
 )
 
 enum class ConnectivityTestState {
