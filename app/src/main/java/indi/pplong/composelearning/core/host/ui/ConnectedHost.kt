@@ -219,14 +219,14 @@ fun HostCard(
                     text = if (serverItemInfo.isSFTP) "SFTP Secured" else "Tradition FTP",
                     style = MaterialTheme.typography.labelLarge,
                     fontStyle = FontStyle.Italic,
-                    color = Color(0xFF409343)
+                    color = if (serverItemInfo.isSFTP) Color(0xFF409343) else MaterialTheme.colorScheme.secondary
                 )
                 Icon(
                     painter = painterResource(if (serverItemInfo.isSFTP) R.drawable.ic_security else R.drawable.ic_security_off),
                     contentDescription = null,
                     tint = if (serverItemInfo.isSFTP) Color(0xFF4CAF50) else MaterialTheme.colorScheme.secondary,
                     modifier = Modifier
-                        .padding(end = 8.dp)
+                        .padding(start = 4.dp)
                         .size(24.dp),
                 )
 
