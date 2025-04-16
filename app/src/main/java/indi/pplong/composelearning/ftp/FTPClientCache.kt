@@ -5,9 +5,11 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.core.net.toUri
 import indi.pplong.composelearning.core.file.model.CommonFileInfo
 import indi.pplong.composelearning.core.file.model.TransferredFileDao
 import indi.pplong.composelearning.core.file.model.toTransferredFileItem
+import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.ftp.base.ICoreFTPClient
 import indi.pplong.composelearning.ftp.base.IThumbnailFTPClient
 import indi.pplong.composelearning.ftp.base.ITransferFTPClient
@@ -104,14 +106,21 @@ class FTPClientCache(
         Log.d("123123", "downloadFile: Trye get FTRP")
         getAvailableTransferFTPClient()?.let { client ->
             client.changePath(fileInfo.path)
-            val transferFile = fileInfo.toTransferredFileItem(config.key, 0)
+            val uri = if (config.downloadDir != null) {
+                FileUtil.getTargetFileContentUriFromDir(
+                    context,
+                    config.downloadDir.toUri(),
+                    fileInfo.name
+                )
+            } else {
+                FileUtil.getContentUriInDownloadDir(context, fileInfo.name)
+            }
+            val transferFile =
+                fileInfo.toTransferredFileItem(config.key, 0).copy(localUri = uri.toString())
+
             client.download(
                 transferFile, onSuccess = {
-                    transferredFileDao.insert(
-                        transferFile.copy(
-                            timeMills = System.currentTimeMillis()
-                        )
-                    )
+                    transferredFileDao.insert(it)
                 }
             )
         }
@@ -123,11 +132,7 @@ class FTPClientCache(
             val transferFile = commonFileInfo.toTransferredFileItem(config.key, 1)
             client.upload(
                 transferFile, onSuccess = {
-                    transferredFileDao.insert(
-                        transferFile.copy(
-                            timeMills = System.currentTimeMillis()
-                        )
-                    )
+                    transferredFileDao.insert(it)
                 }
             )
         }

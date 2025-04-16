@@ -1,12 +1,13 @@
 package indi.pplong.composelearning.ftp.sftp
 
+import android.content.ContentValues
 import android.content.Context
+import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.load.model.TransferringFile
-import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.ftp.FTPConfig
 import indi.pplong.composelearning.ftp.PoolContext
 import indi.pplong.composelearning.ftp.base.ITransferFTPClient
@@ -33,7 +34,7 @@ class SFTPTransferFTPClient(
 
     override suspend fun download(
         file: TransferredFileItem,
-        onSuccess: suspend () -> Unit
+        onSuccess: suspend (TransferredFileItem) -> Unit
     ) {
         sftp = ssh.newStatefulSFTPClient()
         lastRecordTime = System.currentTimeMillis()
@@ -48,22 +49,20 @@ class SFTPTransferFTPClient(
 
         try {
             cacheContext.addToDownloadList(this)
-            val uri = if (config.downloadDir != null) {
-                FileUtil.getTargetFileContentUriFromDir(
-                    context,
-                    config.downloadDir.toUri(),
-                    file.remoteName
-                )
-            } else {
-                FileUtil.getContentUriInDownloadDir(context, file.remoteName)
-            }
+
             sftp.fileTransfer.download(
                 file.remotePathPrefix + "/" + file.remoteName,
-                OutputStreamDestFile(context, uri)
+                OutputStreamDestFile(context, file.localUri.toUri())
             )
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.IS_PENDING, 0)
+            }
+            context.contentResolver.update(file.localUri.toUri(), values, null, null)
+
             progressFlow.update {
                 it.copy(transferStatus = TransferStatus.Successful)
             }
+            onSuccess(file.copy(timeMills = System.currentTimeMillis()))
         } catch (e: Exception) {
             e.printStackTrace()
             progressFlow.update {
@@ -77,7 +76,10 @@ class SFTPTransferFTPClient(
 
     }
 
-    override suspend fun upload(file: TransferredFileItem, onSuccess: suspend () -> Unit) {
+    override suspend fun upload(
+        file: TransferredFileItem,
+        onSuccess: suspend (TransferredFileItem) -> Unit
+    ) {
         lastRecordTime = System.currentTimeMillis()
         progressFlow.update {
             TransferringFile(
@@ -88,14 +90,24 @@ class SFTPTransferFTPClient(
 
         sftp.fileTransfer.transferListener = transferListener
         try {
-            sftp.fileTransfer.upload(file.localUri, file.remoteName)
+            cacheContext.addToUploadList(this)
+            sftp.fileTransfer.upload(
+                OutputStreamSourceFile(context, file.localUri.toUri()),
+                file.remoteName
+            )
             progressFlow.update {
                 it.copy(transferStatus = TransferStatus.Successful)
             }
+            onSuccess(file.copy(timeMills = System.currentTimeMillis()))
         } catch (e: Exception) {
+            e.printStackTrace()
             progressFlow.update {
                 it.copy(transferStatus = TransferStatus.Failed)
             }
+        } finally {
+            sftp.close()
+            delay(500)
+            cacheContext.idleFromUploadList(this)
         }
     }
 

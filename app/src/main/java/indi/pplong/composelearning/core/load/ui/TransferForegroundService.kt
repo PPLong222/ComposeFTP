@@ -43,9 +43,9 @@ class TransferForegroundService : Service() {
 
         val uploadList =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent?.getParcelableArrayListExtra("uploadList", CommonFileInfo::class.java)
+                intent?.getParcelableArrayListExtra("upload_list", CommonFileInfo::class.java)
             } else {
-                intent?.getParcelableArrayListExtra<CommonFileInfo>("download_list")
+                intent?.getParcelableArrayListExtra<CommonFileInfo>("upload_list")
             }
         binder.addTransferTask(hostKey, downloadList ?: listOf(), uploadList ?: listOf())
         return binder

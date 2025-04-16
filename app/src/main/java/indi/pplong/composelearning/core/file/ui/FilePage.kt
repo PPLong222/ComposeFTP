@@ -214,19 +214,22 @@ fun BrowsePage(
 
                 is FilePathUiEffect.LaunchTransferService -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        startTransferService(
-                            context,
-                            transferServiceConn,
-                            hostKey,
-                            effect.downloadFileList,
-                            effect.uploadFileList
-                        )
+                        binder?.let {
+                            binder?.addTransferTask(
+                                hostKey,
+                                effect.downloadFileList,
+                                effect.uploadFileList
+                            )
 
-                        binder?.addTransferTask(
-                            hostKey,
-                            effect.downloadFileList,
-                            effect.uploadFileList
-                        )
+                        } ?: run {
+                            startTransferService(
+                                context,
+                                transferServiceConn,
+                                hostKey,
+                                effect.downloadFileList,
+                                effect.uploadFileList
+                            )
+                        }
                     }
                 }
             }

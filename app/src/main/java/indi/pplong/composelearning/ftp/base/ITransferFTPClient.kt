@@ -13,9 +13,12 @@ interface ITransferFTPClient : IBaseFTPClient {
         val FLOW_EMIT_INTERVAL = 250L
     }
 
-    suspend fun download(file: TransferredFileItem, onSuccess: suspend () -> Unit)
+    suspend fun download(
+        file: TransferredFileItem,
+        onSuccess: suspend (TransferredFileItem) -> Unit
+    )
 
-    suspend fun upload(file: TransferredFileItem, onSuccess: suspend () -> Unit)
+    suspend fun upload(file: TransferredFileItem, onSuccess: suspend (TransferredFileItem) -> Unit)
 
     fun transferFlow(): Flow<TransferringFile>
 }
