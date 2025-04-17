@@ -94,7 +94,7 @@ class SFTPTransferFTPClient(
         sftp.fileTransfer.transferListener = transferListener
         try {
             cacheContext.addToUploadList(this)
-            sftp.fileTransfer.upload(
+            sftp.put(
                 OutputStreamSourceFile(context, file.localUri.toUri()),
                 StringUtil.getFullPath(fileName = file.remoteName, path = file.remotePathPrefix)
             )
