@@ -51,7 +51,7 @@ class SFTPTransferFTPClient(
         try {
             cacheContext.addToDownloadList(this)
 
-            sftp.fileTransfer.download(
+            sftp.get(
                 StringUtil.getFullPath(fileName = file.remoteName, path = file.remotePathPrefix),
                 OutputStreamDestFile(context, file.localUri.toUri())
             )
@@ -82,7 +82,7 @@ class SFTPTransferFTPClient(
         onSuccess: suspend (TransferredFileItem) -> Unit
     ) {
         sftp = ssh.newStatefulSFTPClient()
-        
+
         lastRecordTime = System.currentTimeMillis()
         progressFlow.update {
             TransferringFile(
