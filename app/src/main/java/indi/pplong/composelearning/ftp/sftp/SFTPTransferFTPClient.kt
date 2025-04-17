@@ -93,7 +93,7 @@ class SFTPTransferFTPClient(
             cacheContext.addToUploadList(this)
             sftp.fileTransfer.upload(
                 OutputStreamSourceFile(context, file.localUri.toUri()),
-                file.remoteName
+                file.remotePathPrefix + "/" + file.remoteName
             )
             progressFlow.update {
                 it.copy(transferStatus = TransferStatus.Successful)
