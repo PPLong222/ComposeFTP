@@ -62,7 +62,8 @@ import indi.pplong.composelearning.core.file.model.FileSelectStatus
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiEffect
 import indi.pplong.composelearning.core.file.viewmodel.FilePathUiIntent
 import indi.pplong.composelearning.core.file.viewmodel.FilePathViewModel
-import indi.pplong.composelearning.core.load.ui.TransferBottomSheet
+import indi.pplong.composelearning.core.load.service.IntentRelay
+import indi.pplong.composelearning.core.load.service.TransferBottomSheet
 import indi.pplong.composelearning.core.load.ui.TransferForegroundService
 import indi.pplong.composelearning.core.util.PermissionUtils
 import indi.pplong.composelearning.sys.ui.sys.widgets.CommonTopBar
@@ -100,11 +101,12 @@ fun BrowsePage(
                 name: ComponentName?,
                 service: IBinder?
             ) {
-                Log.d("123123", "onServiceConnected: service conttect")
+                Log.d("123123", "onServiceConnected: service connect")
                 binder = service as? TransferForegroundService.TransferBinder
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
+                Log.d("123123", "onServiceConnected: Service disconnect")
                 binder = null
             }
 
@@ -163,6 +165,17 @@ fun BrowsePage(
             }
         )
     }
+    val currentIntent by IntentRelay.intentState
+    LaunchedEffect(currentIntent) {
+        val fromNotification = currentIntent?.getBooleanExtra(
+            TransferForegroundService.INTENT_EXTRA_FROM_NOTIFICATION_KEY,
+            false
+        ) == true
+        if (fromNotification) {
+            binder = null
+            stopTransferService(context, transferServiceConn)
+        }
+    }
 
     LaunchedEffect(viewModel.uiEffect) {
         viewModel.uiEffect.collect { effect ->
@@ -213,23 +226,22 @@ fun BrowsePage(
                 }
 
                 is FilePathUiEffect.LaunchTransferService -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        binder?.let {
-                            binder?.addTransferTask(
-                                hostKey,
-                                effect.downloadFileList,
-                                effect.uploadFileList
-                            )
+                    Log.d("123123", "BrowsePage: LaunchTransferService binder: $binder")
+                    binder?.let {
+                        binder?.addTransferTask(
+                            hostKey,
+                            effect.downloadFileList,
+                            effect.uploadFileList
+                        )
 
-                        } ?: run {
-                            startTransferService(
-                                context,
-                                transferServiceConn,
-                                hostKey,
-                                effect.downloadFileList,
-                                effect.uploadFileList
-                            )
-                        }
+                    } ?: run {
+                        startTransferService(
+                            context,
+                            transferServiceConn,
+                            hostKey,
+                            effect.downloadFileList,
+                            effect.uploadFileList
+                        )
                     }
                 }
             }
@@ -445,5 +457,12 @@ fun startTransferService(
         context.bindService(this, connection, Context.BIND_AUTO_CREATE)
 
     }
+}
 
+fun stopTransferService(
+    context: Context,
+    connection: ServiceConnection
+) {
+    context.unbindService(connection)
+    context.stopService(Intent(context, TransferForegroundService::class.java))
 }

@@ -25,7 +25,7 @@ import androidx.navigation.toRoute
 import indi.pplong.composelearning.core.file.ui.BrowsePage
 import indi.pplong.composelearning.core.host.ui.HostPageRoute
 import indi.pplong.composelearning.core.host.viewmodel.HostsViewModel
-import indi.pplong.composelearning.core.load.ui.TransferScreen
+import indi.pplong.composelearning.core.load.service.TransferScreen
 import kotlinx.serialization.Serializable
 
 /**

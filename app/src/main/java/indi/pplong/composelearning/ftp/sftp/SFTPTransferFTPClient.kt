@@ -3,7 +3,6 @@ package indi.pplong.composelearning.ftp.sftp
 import android.content.ContentValues
 import android.content.Context
 import android.provider.MediaStore
-import android.util.Log
 import androidx.core.net.toUri
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
@@ -127,7 +126,6 @@ class SFTPTransferFTPClient(
             var tempBytes = 0L
             return StreamCopier.Listener { bytesTransferred ->
                 tempBytes += bytesTransferred
-                Log.d("123123", "file: bytes: ${bytesTransferred}")
                 if (System.currentTimeMillis() - lastRecordTime < ITransferFTPClient.FLOW_EMIT_INTERVAL) {
                     return@Listener
                 }

@@ -2,6 +2,7 @@ package indi.pplong.composelearning.core.load.ui
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.graphics.drawable.Icon
@@ -11,6 +12,7 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import dagger.hilt.android.AndroidEntryPoint
+import indi.pplong.composelearning.MainActivity
 import indi.pplong.composelearning.R
 import indi.pplong.composelearning.core.base.GlobalRepository
 import indi.pplong.composelearning.core.file.model.CommonFileInfo
@@ -25,6 +27,10 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class TransferForegroundService : Service() {
+
+    companion object {
+        val INTENT_EXTRA_FROM_NOTIFICATION_KEY = "from_notification"
+    }
 
     @Inject
     lateinit var globalRepository: GlobalRepository
@@ -64,6 +70,7 @@ class TransferForegroundService : Service() {
     override fun onDestroy() {
         Log.d(TAG, "onDestroy")
         super.onDestroy()
+        stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
     private fun startForegroundByVersion() {
@@ -73,15 +80,30 @@ class TransferForegroundService : Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(
             notificationChannel
         )
+
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Transferring")
             .setContentText("Your file is being transferred...")
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setLargeIcon(Icon.createWithResource(this, R.drawable.img_1))
             .setOngoing(true)
+            .setContentIntent(getPendingIntent())
             .build()
 
         startForeground(10001, notification)
+    }
+
+    private fun getPendingIntent(): PendingIntent? {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(INTENT_EXTRA_FROM_NOTIFICATION_KEY, true)
+        }
+        return PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
     }
 
     inner class TransferBinder : Binder() {

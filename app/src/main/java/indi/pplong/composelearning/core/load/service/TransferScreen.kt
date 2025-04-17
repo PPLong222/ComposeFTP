@@ -1,4 +1,4 @@
-package indi.pplong.composelearning.core.load.ui
+package indi.pplong.composelearning.core.load.service
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -33,6 +33,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.load.model.TransferringFile
+import indi.pplong.composelearning.core.load.ui.FileDownloadingItem
+import indi.pplong.composelearning.core.load.ui.FileTransferredItem
+import indi.pplong.composelearning.core.load.ui.FileUploadingItem
 import indi.pplong.composelearning.core.load.viewmodel.TransferUiIntent
 import indi.pplong.composelearning.core.load.viewmodel.TransferViewModel
 import kotlinx.coroutines.launch

@@ -255,7 +255,6 @@ fun CommonFileItem(
                 )
             }
     ) {
-        Log.d("123123", "CommonFileItem: ${fileInfo.timeStamp}")
         Box {
             CommonListItem(
                 leadingContent = {
@@ -399,7 +398,7 @@ fun DirAndFileIcon(
             Icon(
                 painter = painterResource(R.drawable.ic_folder),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             )
         } else {
             when (fileType) {
