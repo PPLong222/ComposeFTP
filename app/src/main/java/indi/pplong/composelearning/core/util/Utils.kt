@@ -227,3 +227,9 @@ object VibrationUtil {
         )
     }
 }
+
+object StringUtil {
+    fun getFullPath(fileName: String, path: String): String {
+        return path.removeSuffix("/").plus("/").plus(fileName)
+    }
+}

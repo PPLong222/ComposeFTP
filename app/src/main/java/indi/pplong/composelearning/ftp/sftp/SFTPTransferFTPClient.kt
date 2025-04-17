@@ -8,6 +8,7 @@ import androidx.core.net.toUri
 import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.load.model.TransferringFile
+import indi.pplong.composelearning.core.util.StringUtil
 import indi.pplong.composelearning.ftp.FTPConfig
 import indi.pplong.composelearning.ftp.PoolContext
 import indi.pplong.composelearning.ftp.base.ITransferFTPClient
@@ -51,7 +52,7 @@ class SFTPTransferFTPClient(
             cacheContext.addToDownloadList(this)
 
             sftp.fileTransfer.download(
-                file.remotePathPrefix + "/" + file.remoteName,
+                StringUtil.getFullPath(fileName = file.remoteName, path = file.remotePathPrefix),
                 OutputStreamDestFile(context, file.localUri.toUri())
             )
             val values = ContentValues().apply {
@@ -80,6 +81,8 @@ class SFTPTransferFTPClient(
         file: TransferredFileItem,
         onSuccess: suspend (TransferredFileItem) -> Unit
     ) {
+        sftp = ssh.newStatefulSFTPClient()
+        
         lastRecordTime = System.currentTimeMillis()
         progressFlow.update {
             TransferringFile(
@@ -93,7 +96,7 @@ class SFTPTransferFTPClient(
             cacheContext.addToUploadList(this)
             sftp.fileTransfer.upload(
                 OutputStreamSourceFile(context, file.localUri.toUri()),
-                file.remotePathPrefix + "/" + file.remoteName
+                StringUtil.getFullPath(fileName = file.remoteName, path = file.remotePathPrefix)
             )
             progressFlow.update {
                 it.copy(transferStatus = TransferStatus.Successful)
