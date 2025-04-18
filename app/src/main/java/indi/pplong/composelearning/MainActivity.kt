@@ -76,6 +76,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             Log.d("123123", "onNewIntent: ${globalRepository.pool.downloadFTPSet.first()}")
             Log.d("123123", "onNewIntent: ${globalRepository.pool.uploadFTPSet.first()}")
+            // Why Stateflow can't do the work?
             if (globalRepository.pool.downloadFTPSet.first()
                     .isEmpty() && globalRepository.pool.uploadFTPSet.first().isEmpty()
             ) {

@@ -449,22 +449,21 @@ fun FileTailIconItem(
     isSelect: Boolean = true,
 
     ) {
-    if (fileInfo.isDir) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-            tint = MaterialTheme.colorScheme.onSurface,
-            contentDescription = null,
-            modifier = Modifier.padding(end = 6.dp)
-        )
-        return
-    }
-
     if (isOnSelectMode) {
         Checkbox(
             checked = isSelect,
             onCheckedChange = null
         )
     } else {
+        if (fileInfo.isDir) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                tint = MaterialTheme.colorScheme.onSurface,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 6.dp)
+            )
+            return
+        }
         when (fileInfo.transferStatus) {
             TransferStatus.Failed, TransferStatus.Initial -> {
 //                Button(
