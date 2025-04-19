@@ -46,10 +46,8 @@ fun FileThumbnailAsyncImage(
     )
     LaunchedEffect(localUri, key) {
         if (!GlobalCacheList.map.containsKey(key)) {
-            Log.d("ttt", "FileThumbnailAsyncImage: not cached $key")
             cache()
         } else {
-            Log.d("tttt", "FileThumbnailAsyncImage: $key - ${localUri}")
         }
     }
     if (localUri == "") {
@@ -62,7 +60,6 @@ fun FileThumbnailAsyncImage(
         when (painter.state) {
             is AsyncImagePainter.State.Empty,
             is AsyncImagePainter.State.Loading -> {
-                Log.d("ttt", "FileThumbnailAsyncImage: Loading")
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -71,7 +68,6 @@ fun FileThumbnailAsyncImage(
             }
 
             is AsyncImagePainter.State.Success -> {
-                Log.d("ttt", "FileThumbnailAsyncImage: Success")
                 Image(
                     painter = painter,
                     contentDescription = null,
@@ -81,7 +77,6 @@ fun FileThumbnailAsyncImage(
             }
 
             is AsyncImagePainter.State.Error -> {
-                Log.d("ttt", "FileThumbnailAsyncImage: Error")
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -102,18 +97,12 @@ fun FileThumbnailAsyncImage1(
     cache: () -> Unit
 ) {
 
-    Log.d("FileThumbnailAsyncImage1", "FileThumbnailAsyncImage1: key: $key, uri: $localUri")
     val context = LocalContext.current
     val imageLoader = Coil.imageLoader(context)
     LaunchedEffect(Unit) {
         val memoryHit = imageLoader.memoryCache?.get(MemoryCache.Key(key))
         if (memoryHit != null) {
-            Log.d("FileThumbnailAsyncImage1", "FileThumbnailAsyncImage1: Found in memory cache!")
         } else {
-            Log.d(
-                "FileThumbnailAsyncImage1",
-                "FileThumbnailAsyncImage1: NOT Found in memory cache!"
-            )
             val diskHit = imageLoader.diskCache?.openSnapshot(key)
             if (diskHit != null) {
                 Log.d("FileThumbnailAsyncImage1", "FileThumbnailAsyncImage1: Found in disk cache!")

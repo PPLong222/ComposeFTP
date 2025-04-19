@@ -1,6 +1,8 @@
 package indi.pplong.composelearning.ftp
 
+import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.ftp.base.ITransferFTPClient
+import indi.pplong.composelearning.ftp.sftp.SFTPTransferFTPClient
 
 /**
  * Description:
@@ -15,4 +17,6 @@ interface PoolContext {
     fun addToUploadList(singleFTPClient: ITransferFTPClient)
 
     fun idleFromUploadList(singleFTPClient: ITransferFTPClient)
+
+    fun addToPausedQueue(transferredFile: TransferringFile, client: SFTPTransferFTPClient)
 }

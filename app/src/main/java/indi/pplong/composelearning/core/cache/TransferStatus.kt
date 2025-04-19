@@ -11,4 +11,5 @@ sealed class TransferStatus {
     data object Failed : TransferStatus()
     data object Successful : TransferStatus()
     data object Loading : TransferStatus()
+    data class Paused(val size: Long) : TransferStatus()
 }

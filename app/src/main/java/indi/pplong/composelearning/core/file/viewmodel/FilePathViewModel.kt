@@ -37,7 +37,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -72,30 +71,37 @@ class FilePathViewModel @AssistedInject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val downloadFileList = globalViewModel.pool.serverFTPMap.map { it[hostKey] }.filterNotNull()
         .flatMapLatest { cache ->
-            cache.downloadQueue.flatMapLatest { set ->
-                if (set.isEmpty()) {
-                    flowOf(emptyList())
-                } else {
-                    val flows = set.map { it.transferFlow() }
-                    combine(flows) { arr -> arr.toList() }
+            cache.ftpClientState.map { it.downloadList }
+                .flatMapLatest { client ->
+                    if (client.isEmpty()) {
+                        flowOf(emptySet())
+                    } else {
+                        val flows = client.map { it.transferFlow() }
+                        combine(flows) { it.toList() }
+                    }
                 }
-            }
         }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val downloadQueueSize =
-        globalViewModel.pool.serverFTPMap.mapNotNull { it[hostKey] }
-            .flatMapLatest { data -> data.downloadQueue.map { it.size } }
+        globalViewModel.pool.serverFTPMap.map { it[hostKey] }.filterNotNull()
+            .flatMapLatest { cache ->
+                cache.ftpClientState.map { it.downloadList.size }
+            }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val uploadQueueSize =
-        globalViewModel.pool.serverFTPMap.mapNotNull { it[hostKey] }
-            .flatMapLatest { data -> data.uploadQueue.map { it.size } }
+        globalViewModel.pool.serverFTPMap.map { it[hostKey] }.filterNotNull()
+            .flatMapLatest { cache ->
+                cache.ftpClientState.map { it.uploadList.size }
+            }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val idleQueueSize =
-        globalViewModel.pool.serverFTPMap.mapNotNull { it[hostKey] }
-            .flatMapLatest { data -> data.idledClientsQueue.map { it.size } }
+        globalViewModel.pool.serverFTPMap.map { it[hostKey] }.filterNotNull()
+            .flatMapLatest { cache ->
+                cache.ftpClientState.map { it.idleClientList.size }
+            }
 
     val transferringCount = downloadQueueSize.combine(uploadQueueSize) { a, b -> a + b }
 

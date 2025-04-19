@@ -1,5 +1,6 @@
 package indi.pplong.composelearning.core.load.ui
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +33,7 @@ import indi.pplong.composelearning.core.load.viewmodel.TransferUiIntent
 import indi.pplong.composelearning.core.util.DateUtil
 import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.core.util.openFileWithUri
+import indi.pplong.composelearning.sys.Global
 
 /**
  * Description:
@@ -41,12 +43,17 @@ import indi.pplong.composelearning.core.util.openFileWithUri
 
 @Composable
 fun FileDownloadingItem(
-    fileItemInfo: TransferringFile
+    fileItemInfo: TransferringFile,
+    onIntent: (TransferUiIntent) -> Unit
 ) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .clickable {
+                Log.d(Global.GLOBAL_TAG, "FileDownloadingItem: pause")
+                onIntent(TransferUiIntent.ResumeOrPause(fileItemInfo))
+            },
 
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -58,35 +65,20 @@ fun FileDownloadingItem(
                 style = MaterialTheme.typography.titleSmall
             )
             if (fileItemInfo.transferStatus is TransferStatus.Transferring) {
-                Row {
-                    Text(
-                        "${FileUtil.getFileSize(fileItemInfo.transferStatus.speed)} /s",
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(
-                        "${FileUtil.getFileSize((fileItemInfo.transferStatus.value * fileItemInfo.transferredFileItem.size).toLong())} / ${
-                            FileUtil.getFileSize(
-                                fileItemInfo.transferredFileItem.size
-                            )
-                        }",
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
-
-                LinearProgressIndicator(
-                    progress = {
-                        fileItemInfo.transferStatus.value
-                    },
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .padding(top = 4.dp)
-                        .fillMaxWidth(),
+                FileTransferProcessingInfo(
+                    fileItemInfo.transferStatus,
+                    fileItemInfo.transferredFileItem.size
+                )
+            } else if (fileItemInfo.transferStatus is TransferStatus.Paused) {
+                FileTransferPausedInfo(
+                    fileItemInfo.transferStatus,
+                    fileItemInfo.transferredFileItem.size
                 )
             }
         }
     }
 }
+
 
 @Composable
 fun FileUploadingItem(
@@ -179,11 +171,88 @@ fun FileTransferredItem(
 }
 
 @Composable
+fun FileTransferProcessingInfo(transferStatus: TransferStatus.Transferring, fileSize: Long) {
+    Row {
+        Text(
+            "${FileUtil.getFileSize(transferStatus.speed)} /s",
+            style = MaterialTheme.typography.labelSmall
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+            "${FileUtil.getFileSize((transferStatus.value * fileSize).toLong())} / ${
+                FileUtil.getFileSize(
+                    fileSize
+                )
+            }",
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+
+    LinearProgressIndicator(
+        progress = {
+            transferStatus.value
+        },
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .padding(top = 4.dp)
+            .fillMaxWidth(),
+    )
+}
+
+@Composable
+fun FileTransferPausedInfo(transferStatus: TransferStatus.Paused, fileSize: Long) {
+    Row {
+        Text(
+            "Paused",
+            style = MaterialTheme.typography.labelSmall
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+            "${FileUtil.getFileSize(transferStatus.size)} / ${
+                FileUtil.getFileSize(
+                    fileSize
+                )
+            }",
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+
+    LinearProgressIndicator(
+        progress = {
+            transferStatus.size * 1.0F / fileSize
+        },
+        color = MaterialTheme.colorScheme.secondary,
+        modifier = Modifier
+            .padding(top = 4.dp)
+            .fillMaxWidth(),
+    )
+}
+
+
+@Composable
 @Preview
 fun PreviewFileLoadItem() {
-    FileDownloadingItem(
-        TransferringFile()
-    )
+    MaterialTheme {
+        FileDownloadingItem(
+            TransferringFile(
+                transferredFileItem = TransferredFileItem(remoteName = "123"),
+                transferStatus = TransferStatus.Transferring(0.2f, 200)
+            ), {}
+        )
+    }
+}
+
+@Composable
+@Preview
+fun PreviewFileLoadPausedItem() {
+    MaterialTheme {
+        FileDownloadingItem(
+            TransferringFile(
+                transferredFileItem = TransferredFileItem(remoteName = "123", size = 400),
+                transferStatus = TransferStatus.Paused(200)
+            ), {}
+        )
+    }
 }
 
 @Composable

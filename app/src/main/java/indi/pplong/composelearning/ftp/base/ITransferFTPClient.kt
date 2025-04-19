@@ -15,10 +15,12 @@ interface ITransferFTPClient : IBaseFTPClient {
 
     suspend fun download(
         file: TransferredFileItem,
-        onSuccess: suspend (TransferredFileItem) -> Unit
+        onTaskFinish: suspend (TransferredFileItem) -> Unit,
     )
 
     suspend fun upload(file: TransferredFileItem, onSuccess: suspend (TransferredFileItem) -> Unit)
 
     fun transferFlow(): Flow<TransferringFile>
+
+    fun pause()
 }

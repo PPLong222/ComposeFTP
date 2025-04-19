@@ -109,7 +109,11 @@ fun TransferScreen() {
             verticalAlignment = Alignment.Top
         ) { pageIdx ->
             if (pageIdx == 0) {
-                DownloadList(uiState.downloadFileList, uiState.alreadyDownloadFileList)
+                DownloadList(
+                    uiState.downloadFileList,
+                    uiState.alreadyDownloadFileList,
+                    viewModel::sendIntent
+                )
             } else {
                 UploadList(
                     uiState.uploadFileList,
@@ -136,7 +140,8 @@ fun TransferScreen() {
 @Composable
 fun DownloadList(
     downloadFileList: List<TransferringFile>,
-    alreadyDownloadedList: List<TransferredFileItem>
+    alreadyDownloadedList: List<TransferredFileItem>,
+    onIntent: (TransferUiIntent) -> Unit
 ) {
 
     LazyColumn {
@@ -144,7 +149,7 @@ fun DownloadList(
             TransferHeadText("Downloading")
         }
         items(downloadFileList) { fileItemInfo ->
-            FileDownloadingItem(fileItemInfo)
+            FileDownloadingItem(fileItemInfo, onIntent)
         }
         item {
             TransferHeadText("History")

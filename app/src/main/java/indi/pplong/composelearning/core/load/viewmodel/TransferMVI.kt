@@ -27,6 +27,8 @@ sealed class TransferUiIntent : UiIntent {
 
     data class CacheImage(val transferredItemInfo: TransferredFileItem, val context: Context) :
         TransferUiIntent()
+
+    data class ResumeOrPause(val transferringFile: TransferringFile) : TransferUiIntent()
 }
 
 sealed class TransferUiEffect : UiEffect {

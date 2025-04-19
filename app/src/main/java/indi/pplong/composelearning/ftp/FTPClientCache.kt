@@ -8,15 +8,22 @@ import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
 import indi.pplong.composelearning.core.file.model.CommonFileInfo
 import indi.pplong.composelearning.core.file.model.TransferredFileDao
+import indi.pplong.composelearning.core.file.model.TransferredFileItem
+import indi.pplong.composelearning.core.file.model.keyEquals
 import indi.pplong.composelearning.core.file.model.toTransferredFileItem
+import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.ftp.base.ICoreFTPClient
 import indi.pplong.composelearning.ftp.base.IThumbnailFTPClient
 import indi.pplong.composelearning.ftp.base.ITransferFTPClient
 import indi.pplong.composelearning.ftp.ftp.CoreFTPClient
 import indi.pplong.composelearning.ftp.sftp.SFTPCoreClient
+import indi.pplong.composelearning.ftp.sftp.SFTPTransferFTPClient
+import indi.pplong.composelearning.ftp.state.TransferState
+import indi.pplong.composelearning.sys.Global
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.getAndUpdate
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -40,11 +47,17 @@ class FTPClientCache(
         private const val LONGEST_ACTIVE_TIME = 10 * 1000L
     }
 
+    private val TAG = javaClass.name
+
     lateinit var coreFTPClient: ICoreFTPClient
 
-    var uploadQueue = MutableStateFlow(mutableSetOf<ITransferFTPClient>())
-    var downloadQueue = MutableStateFlow(mutableSetOf<ITransferFTPClient>())
-    var idledClientsQueue = MutableStateFlow(mutableListOf<ITransferFTPClient>())
+//    var uploadQueue = MutableStateFlow(mutableSetOf<ITransferFTPClient>())
+//    var downloadQueue = MutableStateFlow(mutableSetOf<ITransferFTPClient>())
+//    var idledClientsQueue = MutableStateFlow(mutableListOf<ITransferFTPClient>())
+//    var pausedQueue = MutableStateFlow(mutableListOf<TransferringFile>())
+
+    private val _ftpClientState: MutableStateFlow<TransferState> = MutableStateFlow(TransferState())
+    val ftpClientState = _ftpClientState.asStateFlow()
 
     /**
      * Feature Client:
@@ -52,10 +65,6 @@ class FTPClientCache(
      */
     lateinit var thumbnailFTPClient: IThumbnailFTPClient
 
-
-    val workingClientsCount: Int = downloadQueue.value.size + uploadQueue.value.size + 1
-    val idleClientsCount: Int = idledClientsQueue.value.size
-    val totalClientSize = workingClientsCount + idleClientsCount
     private val clientPoolLock = Mutex()
 
     init {
@@ -70,39 +79,40 @@ class FTPClientCache(
     suspend fun getCurrentPath() = coreFTPClient.getCurrentPath()
 
     suspend fun getAvailableTransferFTPClient(): ITransferFTPClient? {
-        return clientPoolLock.withLock {
-            var targetClient: ITransferFTPClient? = null
-            idledClientsQueue.getAndUpdate { queue ->
-                val newQueue = queue.toMutableList()
-                Log.d("TTTTT", "getAvailableTransferFTPClient ${newQueue.size}")
+        var targetClient: ITransferFTPClient? = null
+        clientPoolLock.withLock {
+            val newQueue = _ftpClientState.value.idleClientList.toMutableList()
+            Log.d(TAG, "getAvailableTransferFTPClient ${newQueue.size}")
 
-                while (!newQueue.isEmpty()) {
-                    val client: ITransferFTPClient = newQueue.first()
-                    newQueue.removeAt(0)
+            while (!newQueue.isEmpty()) {
+                val client: ITransferFTPClient = newQueue.first()
+                newQueue.removeAt(0)
 
-                    if (client.checkAndKeepAlive()) {
-                        Log.d("TTTTT", "getAvailableTransferFTPClient:  reuse")
-                        targetClient = client
-                        break
-                    }
-                }
-                newQueue
-            }
-
-            if (targetClient == null && totalClientSize < MAX_CLIENTS_SIZE) {
-                val client = coreFTPClient.createTransferFTPClient(
-                    this, context
-                )
-                if (client.initClient()) {
-                    return client
+                if (client.checkAndKeepAlive()) {
+                    Log.d(TAG, "getAvailableTransferFTPClient:  reuse")
+                    targetClient = client
+                    break
                 }
             }
-            targetClient
+
+            _ftpClientState.update {
+                it.copy(idleClientList = newQueue)
+            }
         }
+
+        if (targetClient == null) {
+            val client = coreFTPClient.createTransferFTPClient(
+                this, context
+            )
+            if (client.initClient()) {
+                targetClient = client
+            }
+        }
+        return targetClient
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
-    suspend fun downloadFile(fileInfo: CommonFileInfo) {
+    suspend fun downloadFile(fileInfo: CommonFileInfo, offsetBytes: Long = 0L) {
         Log.d("123123", "downloadFile: Trye get FTRP")
         getAvailableTransferFTPClient()?.let { client ->
             client.changePath(fileInfo.path)
@@ -115,12 +125,15 @@ class FTPClientCache(
             } else {
                 FileUtil.getContentUriInDownloadDir(context, fileInfo.name)
             }
-            val transferFile =
-                fileInfo.toTransferredFileItem(config.key, 0).copy(localUri = uri.toString())
+            var transferFile =
+                fileInfo.toTransferredFileItem(config.key, 0, offsetBytes)
+                    .copy(localUri = uri.toString())
 
+            val id = transferredFileDao.insert(transferFile)
+            transferFile = transferFile.copy(id = id)
             client.download(
-                transferFile, onSuccess = {
-                    transferredFileDao.insert(it)
+                transferFile, onTaskFinish = {
+                    transferredFileDao.update(it)
                 }
             )
         }
@@ -129,7 +142,7 @@ class FTPClientCache(
     suspend fun uploadFile(commonFileInfo: CommonFileInfo) {
         getAvailableTransferFTPClient()?.let { client ->
             client.changePath(commonFileInfo.path)
-            val transferFile = commonFileInfo.toTransferredFileItem(config.key, 1)
+            val transferFile = commonFileInfo.toTransferredFileItem(config.key, 1, 0)
             client.upload(
                 transferFile, onSuccess = {
                     transferredFileDao.insert(it)
@@ -153,36 +166,85 @@ class FTPClientCache(
     }
 
     override fun addToDownloadList(singleFTPClient: ITransferFTPClient) {
-        downloadQueue.update { set ->
-            set.toMutableSet().apply { add(singleFTPClient) }
+        _ftpClientState.update {
+            it.copy(downloadList = it.downloadList + singleFTPClient)
         }
     }
 
     override fun idleFromDownloadList(singleFTPClient: ITransferFTPClient) {
-        downloadQueue.update { set ->
-            set.toMutableSet().apply { remove(singleFTPClient) }
-        }
-        idledClientsQueue.update {
-
-            it.toMutableList().apply {
-                add(singleFTPClient)
-            }
+        _ftpClientState.update {
+            it.copy(
+                downloadList = it.downloadList - singleFTPClient,
+                idleClientList = it.idleClientList + singleFTPClient
+            )
         }
     }
 
     override fun addToUploadList(singleFTPClient: ITransferFTPClient) {
-        uploadQueue.update { set ->
-            set.toMutableSet().apply { add(singleFTPClient) }
+        _ftpClientState.update {
+            it.copy(uploadList = it.uploadList + singleFTPClient)
         }
     }
 
     override fun idleFromUploadList(singleFTPClient: ITransferFTPClient) {
-        uploadQueue.update { set ->
-            set.toMutableSet().apply { remove(singleFTPClient) }
+        _ftpClientState.update {
+            it.copy(
+                uploadList = it.uploadList - singleFTPClient,
+                idleClientList = it.idleClientList + singleFTPClient
+            )
+        }
+    }
+
+    override fun addToPausedQueue(
+        transferredFile: TransferringFile,
+        client: SFTPTransferFTPClient
+    ) {
+        _ftpClientState.update {
+            it.copy(
+                pausedList = it.pausedList + transferredFile,
+                downloadList = it.downloadList - client,
+                uploadList = it.uploadList - client,
+                idleClientList = it.idleClientList + client
+            )
+        }
+    }
+
+    suspend fun pauseTransferTask(fileInfo: TransferredFileItem) {
+        Log.d(Global.GLOBAL_TAG, "pauseTransferTask: ")
+
+        _ftpClientState.value.downloadList.forEach { client ->
+            if (client.transferFlow().first().transferredFileItem.keyEquals(fileInfo)) {
+                client.pause()
+            }
+        }
+    }
+
+    suspend fun resumeTransferTask(fileInfo: TransferringFile) {
+        if (_ftpClientState.value.pausedList.find { it == fileInfo } == null) {
+            return
         }
 
-        idledClientsQueue.update {
-            it.toMutableList().apply { add(singleFTPClient) }
+        getAvailableTransferFTPClient()?.let { client ->
+            _ftpClientState.update {
+                it.copy(
+                    pausedList = it.pausedList - fileInfo,
+                    downloadList = if (fileInfo.transferredFileItem.transferType == 0) it.downloadList + client else it.downloadList,
+                    uploadList = if (fileInfo.transferredFileItem.transferType == 1) it.uploadList + client else it.uploadList,
+                )
+            }
+            if (fileInfo.transferredFileItem.transferType == 0) {
+                client.download(
+                    fileInfo.transferredFileItem, onTaskFinish = {
+                        transferredFileDao.update(it)
+                    }
+                )
+            } else {
+                client.upload(
+                    fileInfo.transferredFileItem, onSuccess = {
+                        transferredFileDao.update(it)
+                    }
+                )
+            }
         }
     }
 }

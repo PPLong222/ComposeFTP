@@ -13,7 +13,7 @@ import androidx.room.Update
 @Dao
 interface TransferredFileDao {
     @Insert
-    suspend fun insert(item: TransferredFileItem)
+    suspend fun insert(item: TransferredFileItem): Long
 
     @Query("SELECT * from transferred_file where transferType == 0")
     suspend fun getDownloadedItems(): List<TransferredFileItem>

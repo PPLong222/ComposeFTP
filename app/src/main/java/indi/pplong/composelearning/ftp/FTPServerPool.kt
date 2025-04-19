@@ -1,7 +1,6 @@
 package indi.pplong.composelearning.ftp
 
 import android.content.Context
-import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import indi.pplong.composelearning.core.file.model.TransferredFileDao
 import indi.pplong.composelearning.ftp.ftp.BaseFTPClient
@@ -10,6 +9,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
@@ -29,23 +29,38 @@ class FTPServerPool @Inject constructor(
     val serverFTPMap = _serverFTPMap
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val downloadFTPSet = _serverFTPMap.map { map ->
-        Log.d("TTTest", "Client: Map changed")
-        map.values.map { it.downloadQueue }
-    }.flatMapLatest {
-        Log.d("TTTest", "Client")
-
-        combine(it) { sets ->
-            sets.flatMap { it }.toSet()
+    val downloadFTPSet = _serverFTPMap.flatMapLatest { map ->
+        if (map.isEmpty()) {
+            flowOf(emptySet())
+        } else {
+            val flows = map.values.map { it.ftpClientState.map { it.downloadList } }
+            combine(flows) { sets ->
+                sets.flatMap { it }.toSet()
+            }
         }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uploadFTPSet = _serverFTPMap.map { map ->
-        map.values.map { it.uploadQueue }
-    }.flatMapLatest {
-        combine(it) { sets ->
-            sets.flatMap { it }.toSet()
+    val pausedTransferringFile = _serverFTPMap.flatMapLatest { map ->
+        if (map.isEmpty()) {
+            flowOf(emptyList())
+        } else {
+            val flows = map.values.map { it.ftpClientState.map { it.pausedList } }
+            combine(flows) { sets ->
+                sets.flatMap { it }.toList()
+            }
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val uploadFTPSet = _serverFTPMap.flatMapLatest { map ->
+        if (map.isEmpty()) {
+            flowOf(emptySet())
+        } else {
+            val flows = map.values.map { it.ftpClientState.map { it.uploadList } }
+            combine(flows) { sets ->
+                sets.flatMap { it }.toSet()
+            }
         }
     }
 

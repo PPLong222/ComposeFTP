@@ -525,6 +525,10 @@ fun FileTailIconItem(
                         .size(32.dp)
                 )
             }
+
+            is TransferStatus.Paused -> {
+
+            }
         }
     }
 

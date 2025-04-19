@@ -8,9 +8,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import indi.pplong.composelearning.core.base.GlobalRepository
 import indi.pplong.composelearning.core.base.mvi.BaseViewModel
 import indi.pplong.composelearning.core.cache.GlobalCacheList
+import indi.pplong.composelearning.core.cache.TransferStatus
 import indi.pplong.composelearning.core.file.model.TransferredFileDao
 import indi.pplong.composelearning.core.file.model.TransferredFileItem
 import indi.pplong.composelearning.core.file.model.getKey
+import indi.pplong.composelearning.core.load.model.TransferringFile
 import indi.pplong.composelearning.core.util.FileUtil
 import indi.pplong.composelearning.core.util.MD5Utils
 import indi.pplong.composelearning.core.util.getContentUri
@@ -44,10 +46,20 @@ class TransferViewModel @Inject constructor(
         if (clientSet.isEmpty()) {
             flowOf(emptyList())
         } else {
-            val flows = clientSet.map { it.transferFlow() }
+            val flows =
+                clientSet.map { it.transferFlow() }
             combine(flows) { arr -> arr.toList() }
         }
     }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val downloadAndPausedTransfers = combine(
+        downloadTransfers,
+        globalViewModel.pool.pausedTransferringFile
+    ) { fromClients, fromExtra ->
+        (fromClients + fromExtra).distinct()
+    }
+
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val uploadTransfers = globalViewModel.pool.uploadFTPSet.flatMapLatest { clientSet ->
@@ -61,7 +73,8 @@ class TransferViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            downloadTransfers.collect { list ->
+            downloadAndPausedTransfers.collect { list ->
+                Log.d(TAG, "list: ${list.size}  ${list.firstOrNull()}")
                 getDownloadedFileList()
                 setState {
                     copy(downloadFileList = list)
@@ -97,7 +110,8 @@ class TransferViewModel @Inject constructor(
 
     private fun getDownloadedFileList() {
         launchOnIO {
-            val list = fileDao.getDownloadedItems().sortedByDescending { it.timeMills }
+            val list = fileDao.getDownloadedItems().filter { it.isComplete }
+                .sortedByDescending { it.timeMills }
             setState {
                 copy(
                     alreadyDownloadFileList = list
@@ -122,6 +136,10 @@ class TransferViewModel @Inject constructor(
                 intent.context,
                 intent.transferredItemInfo
             )
+
+            is TransferUiIntent.ResumeOrPause -> {
+                pauseTask(intent.transferringFile)
+            }
         }
     }
 
@@ -155,7 +173,9 @@ class TransferViewModel @Inject constructor(
                 48,
                 48
             )
-
+            if (bitmap == null) {
+                return@launchOnIO
+            }
             val finalFile =
                 MD5Utils.bitmapToCompressedFile(context, bitmap!!, key)
             val uri = finalFile.getContentUri(context)
@@ -187,5 +207,17 @@ class TransferViewModel @Inject constructor(
         }
 
 
+    }
+
+    private fun pauseTask(item: TransferringFile) {
+        launchOnIO {
+            globalViewModel.pool.serverFTPMap.value[item.transferredFileItem.serverKey]?.let { cache ->
+                if (item.transferStatus is TransferStatus.Transferring) {
+                    cache.pauseTransferTask(item.transferredFileItem)
+                } else if (item.transferStatus is TransferStatus.Paused) {
+                    cache.resumeTransferTask(item)
+                }
+            }
+        }
     }
 }

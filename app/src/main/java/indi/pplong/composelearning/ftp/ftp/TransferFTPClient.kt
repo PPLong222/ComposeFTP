@@ -65,7 +65,7 @@ class TransferFTPClient @Inject constructor(
     @RequiresApi(Build.VERSION_CODES.Q)
     override suspend fun download(
         file: TransferredFileItem,
-        onSuccess: suspend (TransferredFileItem) -> Unit
+        onTaskFinish: suspend (TransferredFileItem) -> Unit
     ) {
         lastRecordTime = System.currentTimeMillis()
         var tempBytes = 0
@@ -118,7 +118,7 @@ class TransferFTPClient @Inject constructor(
                 progressFlow.update {
                     it.copy(transferStatus = TransferStatus.Successful)
                 }
-                onSuccess(file)
+                onTaskFinish(file)
             } else {
                 progressFlow.update {
                     it.copy(transferStatus = TransferStatus.Failed)
@@ -204,5 +204,9 @@ class TransferFTPClient @Inject constructor(
 
     override fun transferFlow(): Flow<TransferringFile> {
         return progressFlow
+    }
+
+    override fun pause() {
+
     }
 }
